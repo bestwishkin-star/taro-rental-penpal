@@ -21,4 +21,5 @@ coverage
 
 # 构建产物
 apps/frontend/dist
+apps/frontend/.swc
 apps/backend/.next
