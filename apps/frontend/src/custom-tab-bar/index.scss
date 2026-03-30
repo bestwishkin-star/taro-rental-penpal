@@ -1,0 +1,49 @@
+.custom-tab-bar {
+  position: fixed;
+  right: 20px;
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: 20px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 8px;
+  border-radius: 24px;
+  background: rgba(45, 36, 27, 0.9);
+  box-shadow: 0 12px 28px rgba(45, 36, 27, 0.16);
+  backdrop-filter: blur(10px);
+  z-index: 20;
+}
+
+.custom-tab-bar__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 8px 8px;
+  border-radius: 999px;
+  text-align: center;
+  transition: background 0.2s ease;
+}
+
+.custom-tab-bar__item--active {
+  background: linear-gradient(135deg, #f0c882 0%, #f6ddae 100%);
+}
+
+.custom-tab-bar__icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+.custom-tab-bar__label {
+  color: rgba(255, 250, 242, 0.7);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.custom-tab-bar__item--active .custom-tab-bar__label {
+  color: #2d241b;
+}

@@ -1,0 +1,15 @@
+page {
+  min-height: 100%;
+  color: #2d241b;
+  font-family: 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
+  background: #f5efe6;
+}
+
+view,
+text {
+  box-sizing: border-box;
+}
+
+text {
+  display: block;
+}

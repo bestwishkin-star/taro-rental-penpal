@@ -1,0 +1,24 @@
+node_modules
+dist
+.next
+.taro
+coverage
+.DS_Store
+*.log
+*.tsbuildinfo
+
+# 环境变量
+.env
+.env.local
+
+# MCP 配置
+.mcp
+.mcp.json
+
+# Claude Code 本地配置
+.claude/settings.json
+.claude/settings.local.json
+
+# 构建产物
+apps/frontend/dist
+apps/backend/.next

@@ -1,0 +1,41 @@
+{
+  "name": "@rental-penpal/frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:weapp": "cross-env NODE_ENV=development taro build --type weapp --watch",
+    "build:weapp": "cross-env NODE_ENV=production taro build --type weapp",
+    "dev:tt": "cross-env NODE_ENV=development taro build --type tt --watch",
+    "build:tt": "cross-env NODE_ENV=production taro build --type tt",
+    "dev:jd": "cross-env NODE_ENV=development taro build --type jd --watch",
+    "build:jd": "cross-env NODE_ENV=production taro build --type jd",
+    "lint": "eslint . --ext .ts,.tsx",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@rental-penpal/shared": "workspace:*",
+    "@tarojs/components": "^4.0.9",
+    "@tarojs/helper": "^4.0.9",
+    "@tarojs/react": "^4.0.9",
+    "@tarojs/runtime": "^4.0.9",
+    "@tarojs/shared": "^4.0.9",
+    "@tarojs/taro": "^4.0.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@babel/preset-react": "^7.28.5",
+    "@types/node": "^22.13.10",
+    "@tarojs/cli": "^4.0.9",
+    "@tarojs/plugin-framework-react": "^4.0.9",
+    "@tarojs/plugin-platform-jd": "^4.0.9",
+    "@tarojs/plugin-platform-tt": "^4.0.9",
+    "@tarojs/plugin-platform-weapp": "^4.0.9",
+    "@tarojs/webpack5-runner": "^4.0.9",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "babel-preset-taro": "^4.1.11",
+    "cross-env": "^7.0.3",
+    "sass": "^1.85.1"
+  }
+}

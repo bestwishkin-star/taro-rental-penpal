@@ -1,0 +1,69 @@
+import Taro from '@tarojs/taro';
+
+import type { ApiResponse } from '@shared/contracts/api';
+import { BizCode } from '@shared/errors';
+
+import { frontendEnv } from '@/shared/config/env';
+
+const TOKEN_KEY = 'auth_token';
+
+export function getToken(): string | null {
+  return Taro.getStorageSync(TOKEN_KEY) || null;
+}
+
+export function setToken(token: string) {
+  Taro.setStorageSync(TOKEN_KEY, token);
+}
+
+export function removeToken() {
+  Taro.removeStorageSync(TOKEN_KEY);
+}
+
+export class BizError extends Error {
+  constructor(
+    public readonly code: number,
+    message: string
+  ) {
+    super(message);
+    this.name = 'BizError';
+  }
+}
+
+interface RequestOptions<TBody> {
+  body?: TBody;
+  method?: 'GET' | 'POST';
+}
+
+export async function httpRequest<TData, TBody = undefined>(
+  path: string,
+  options: RequestOptions<TBody> = {}
+) {
+  const { body, method = 'GET' } = options;
+  const header: Record<string, string> = {
+    'content-type': 'application/json'
+  };
+
+  const token = getToken();
+  if (token) {
+    header['authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await Taro.request<ApiResponse<TData>>({
+    url: `${frontendEnv.apiBaseUrl}${path}`,
+    method,
+    data: body,
+    header
+  });
+
+  if (response.statusCode >= 400 || !response.data) {
+    throw new BizError(BizCode.UNKNOWN, `网络请求失败 [${response.statusCode}]`);
+  }
+
+  const { code, message, data } = response.data;
+
+  if (code !== BizCode.OK) {
+    throw new BizError(code, message);
+  }
+
+  return data as TData;
+}

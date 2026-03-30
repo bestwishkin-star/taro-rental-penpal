@@ -1,0 +1,6 @@
+node_modules
+dist
+.next
+.taro
+coverage
+pnpm-lock.yaml
