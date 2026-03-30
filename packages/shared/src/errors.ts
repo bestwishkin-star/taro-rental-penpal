@@ -24,11 +24,9 @@ export const BizCode = {
 
   // 聊天 1400-1499
   CONVERSATION_NOT_FOUND: 1400,
-} as const;
+};
 
-export type BizCode = (typeof BizCode)[keyof typeof BizCode];
-
-export const BizMessage: Record<BizCode, string> = {
+export const BizMessage = {
   [BizCode.OK]: '成功',
   [BizCode.UNKNOWN]: '系统错误',
   [BizCode.INVALID_PARAMS]: '参数错误',

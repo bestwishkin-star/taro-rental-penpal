@@ -1,14 +1,13 @@
-import { useEffect, useState } from 'react';
-
 import { View, Text, Image } from '@tarojs/components';
 import Taro from '@tarojs/taro';
+import { useEffect, useState } from 'react';
 
-import homeIcon from '@/assets/icons/home.png';
-import homeActiveIcon from '@/assets/icons/home-active.png';
-import findIcon from '@/assets/icons/find.png';
 import findActiveIcon from '@/assets/icons/find-active.png';
-import profileIcon from '@/assets/icons/profile.png';
+import findIcon from '@/assets/icons/find.png';
+import homeActiveIcon from '@/assets/icons/home-active.png';
+import homeIcon from '@/assets/icons/home.png';
 import profileActiveIcon from '@/assets/icons/profile-active.png';
+import profileIcon from '@/assets/icons/profile.png';
 
 import './index.scss';
 
@@ -32,7 +31,7 @@ const tabs = [
     label: '我的',
     icon: profileIcon,
     activeIcon: profileActiveIcon
-  },
+  }
 ];
 
 export default function CustomTabBar() {
