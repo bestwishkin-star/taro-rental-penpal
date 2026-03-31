@@ -3,7 +3,7 @@ import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
 import { BizError } from '@/shared/api/http';
-import { createRental, uploadPhoto } from '@/shared/api/services';
+import { createRental } from '@/shared/api/services';
 import { PageShell } from '@/shared/ui/page-shell';
 
 import iconArea from './assets/icons/icon-area.png';
@@ -41,9 +41,7 @@ export default function SharePage() {
 
     setSubmitting(true);
     try {
-      // 先上传图片，获取远端 URL
-      const photoUrls = await Promise.all(photos.map((p) => uploadPhoto(p).then((r) => r.url)));
-
+      // photos 已在选图时上传完毕，此处直接使用服务端 URL
       await createRental({
         price,
         location,
@@ -52,7 +50,7 @@ export default function SharePage() {
         experience,
         tags: selectedTags,
         wechat: wechat || undefined,
-        photos: photoUrls
+        photos
       });
 
       void Taro.showToast({ title: '发布成功！', icon: 'success' });
