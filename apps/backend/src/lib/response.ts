@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import type { ApiResponse } from '@shared/contracts/api';
 import { BizCode, BizMessage } from '@shared/errors';
+import type { BizCodeValue } from '@shared/errors';
 
 import { AppError } from './errors';
 
@@ -13,7 +14,7 @@ export function ok<T>(data: T): NextResponse<ApiResponse<T>> {
   });
 }
 
-export function fail(bizCode: BizCode, message?: string): NextResponse<ApiResponse<null>> {
+export function fail(bizCode: BizCodeValue, message?: string): NextResponse<ApiResponse<null>> {
   return NextResponse.json(
     {
       code: bizCode,
