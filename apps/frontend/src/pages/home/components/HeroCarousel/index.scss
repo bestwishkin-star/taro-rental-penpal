@@ -1,0 +1,80 @@
+.hero-carousel {
+  margin-bottom: 28px;
+
+  &__swiper {
+    height: 180px;
+  }
+
+  &__item-wrapper {
+    padding: 0;
+    margin-right: 10px;
+  }
+
+  &__item {
+    position: relative;
+    height: 180px;
+    border-radius: 24px;
+    background-size: cover;
+    background-position: center;
+    overflow: hidden;
+    box-shadow: 0 14px 32px rgba(45, 36, 27, 0.16);
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(45, 36, 27, 0.8);
+    border-radius: 24px;
+  }
+
+  &__content {
+    position: relative;
+    z-index: 1;
+    padding: 28px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__eyebrow {
+    color: #f6ddae;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  &__title {
+    color: #fffaf2;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 8px;
+  }
+
+  &__subtitle {
+    color: rgba(255, 250, 242, 0.72);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  &__dots {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(139, 119, 97, 0.25);
+
+    &--active {
+      background: #f0c882;
+    }
+  }
+}

@@ -1,0 +1,66 @@
+.action-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 18px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(109, 84, 48, 0.1);
+  box-shadow: 0 8px 24px rgba(86, 61, 27, 0.08);
+
+  &--active {
+    transform: scale(0.98);
+    opacity: 0.92;
+  }
+
+  &__icon-wrap {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &--find {
+      background: linear-gradient(135deg, #f8edd8 0%, #f0d9a8 100%);
+    }
+
+    &--share {
+      background: linear-gradient(135deg, #e8f0d8 0%, #d4e8b0 100%);
+    }
+  }
+
+  &__icon {
+    font-size: 24px;
+  }
+
+  &__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  &__label {
+    color: #2d241b;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.4;
+  }
+
+  &__desc {
+    color: #7a6b57;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  &__arrow {
+    color: #8e6c3c;
+    font-size: 22px;
+    font-weight: 300;
+    flex-shrink: 0;
+  }
+}

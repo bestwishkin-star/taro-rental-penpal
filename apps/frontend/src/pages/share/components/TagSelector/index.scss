@@ -1,0 +1,30 @@
+.tag-selector {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+
+  &__tag {
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: #f0e8dc;
+    border: 1px solid transparent;
+
+    &--active {
+      background: rgba(193, 127, 74, 0.15);
+      border-color: #c17f4a;
+
+      .tag-selector__text {
+        color: #c17f4a;
+        font-weight: 700;
+      }
+    }
+  }
+
+  &__text {
+    color: #8b5e3c;
+    font-size: 12px;
+    font-weight: 500;
+  }
+}

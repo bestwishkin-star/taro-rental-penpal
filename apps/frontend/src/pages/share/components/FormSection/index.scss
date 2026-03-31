@@ -1,0 +1,24 @@
+.form-section {
+  margin-bottom: 16px;
+  padding: 18px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(109, 84, 48, 0.08);
+  box-shadow: 0 4px 16px rgba(86, 61, 27, 0.06);
+
+  &__title {
+    display: block;
+    color: #2d241b;
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  &__subtitle {
+    display: block;
+    color: #8b7761;
+    font-size: 12px;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+}
