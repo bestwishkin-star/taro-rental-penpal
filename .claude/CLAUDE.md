@@ -62,6 +62,31 @@ pnpm typecheck            # 类型检查
 **前端** (`src/shared/config/env.ts`):
 - `apiBaseUrl`: 后端 API 地址
 
+### 图标与图片资源
+
+**禁止**使用字体图标（如 lucide、feather、iconfont）或 emoji 作为 UI 图标。
+
+**必须**从 Pencil 设计稿直接切图使用：
+
+1. 在 Pencil 中选中目标图标/图片节点，使用 `mcp__pencil__export_nodes` 导出
+2. 导出参数：`scale: 2`（2倍图）、`format: "png"`
+3. 输出目录：`apps/frontend/src/assets/icons/<页面名>/`
+4. 文件命名：语义化英文，如 `icon-price.png`、`icon-location.png`
+5. 在代码中通过 `import` 引入，使用 `<Image>` 组件渲染，需显式指定 `width` 和 `height`
+
+```tsx
+import iconPrice from '@/assets/icons/share/icon-price.png';
+// ...
+<Image src={iconPrice} className="icon" mode="aspectFit" />
+```
+
+```scss
+.icon {
+  width: 18px;   /* 设计稿尺寸，非切图尺寸 */
+  height: 18px;
+}
+```
+
 ## 注意事项
 
 - 前端设计稿宽度: 375px
@@ -71,4 +96,4 @@ pnpm typecheck            # 类型检查
 
 ---
 
-**最后更新**: 2026-03-26
+**最后更新**: 2026-03-31
