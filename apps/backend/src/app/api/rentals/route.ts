@@ -1,9 +1,9 @@
 import type { CreateRentalInput } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
 
+import { fail, handleError, ok } from '@/lib/response';
 import { findUserByToken } from '@/modules/auth/auth.repository';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
-import { fail, handleError, ok } from '@/lib/response';
 
 function extractToken(request: Request): string | null {
   const auth = request.headers.get('authorization') ?? '';

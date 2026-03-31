@@ -2,8 +2,8 @@ import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/compone
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
-import { createRental, uploadPhoto } from '@/shared/api/services';
 import { BizError } from '@/shared/api/http';
+import { createRental, uploadPhoto } from '@/shared/api/services';
 import { PageShell } from '@/shared/ui/page-shell';
 
 import iconArea from './assets/icons/icon-area.png';

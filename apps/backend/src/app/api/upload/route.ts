@@ -4,8 +4,8 @@ import path from 'node:path';
 
 import { BizCode } from '@shared/errors';
 
-import { findUserByToken } from '@/modules/auth/auth.repository';
 import { fail, handleError, ok } from '@/lib/response';
+import { findUserByToken } from '@/modules/auth/auth.repository';
 
 function extractToken(request: Request): string | null {
   const auth = request.headers.get('authorization') ?? '';
