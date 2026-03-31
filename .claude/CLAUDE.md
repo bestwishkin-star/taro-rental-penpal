@@ -62,6 +62,31 @@ pnpm typecheck            # 类型检查
 **前端** (`src/shared/config/env.ts`):
 - `apiBaseUrl`: 后端 API 地址
 
+### 前端状态管理
+
+使用 **Zustand** 进行全局状态管理（React 项目，非 Vue，不用 Pinia）。
+
+**目录结构**：
+```
+shared/store/
+├── auth-store.ts      # 登录/用户状态
+├── taro-storage.ts    # Taro 存储适配器（替代 localStorage）
+└── index.ts           # 统一导出
+```
+
+**规范**：
+- 每个业务域一个 store 文件（如 `auth-store.ts`、`rental-store.ts`）
+- 用 `persist` + `createJSONStorage(() => taroStorage)` 实现持久化
+- `partialize` 只持久化需要的字段，actions 不需要持久化
+- 页面级临时状态（表单填写等）用 `useState`，不放 store
+- 从 `@/shared/store` 统一导入，不直接引用具体 store 文件
+
+```ts
+import { useAuthStore } from '@/shared/store';
+
+const { isLoggedIn, profile, handleLogout } = useAuthStore();
+```
+
 ### 前端组件原子化规范
 
 页面组件必须按业务拆分，禁止将整个页面写在一个组件文件里。
