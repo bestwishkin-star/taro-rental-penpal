@@ -3,6 +3,7 @@ import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
 import { uploadPhoto } from '@/shared/api/services';
+import { useAuthStore } from '@/shared/store';
 
 import iconAdd from '../../assets/icons/icon-add.png';
 
@@ -15,9 +16,14 @@ interface Props {
 }
 
 export function PhotoUploader({ photos, max = 9, onChange }: Props) {
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [uploading, setUploading] = useState(false);
 
   function handleAdd() {
+    if (!isLoggedIn) {
+      void Taro.showToast({ title: '请先登录后再上传图片', icon: 'none' });
+      return;
+    }
     const remaining = max - photos.length;
     if (remaining <= 0) return;
 
