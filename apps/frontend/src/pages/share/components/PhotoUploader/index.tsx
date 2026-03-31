@@ -29,15 +29,16 @@ export function PhotoUploader({ photos, max = 9, onChange }: Props) {
 
     Taro.requirePrivacyAuthorize({
       success() {
-        void Taro.chooseImage({
+        void Taro.chooseMedia({
           count: remaining,
+          mediaType: ['image'],
           sizeType: ['compressed'],
           sourceType: ['album', 'camera'],
           async success(res) {
             setUploading(true);
             try {
               const urls = await Promise.all(
-                res.tempFilePaths.map((p) => uploadPhoto(p).then((r) => r.url))
+                res.tempFiles.map((f) => uploadPhoto(f.tempFilePath).then((r) => r.url))
               );
               onChange([...photos, ...urls].slice(0, max));
             } catch {

@@ -3,8 +3,14 @@ import { httpRequest, uploadFile } from './http';
 import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import type { ConversationPreview } from '@shared/contracts/chat';
 import type { OverviewPayload } from '@shared/contracts/overview';
-import type { CreateRentalInput, CreateRentalResponse, RentalListing } from '@shared/contracts/rental';
+import type {
+  CreateRentalInput,
+  CreateRentalResponse,
+  RentalListing
+} from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
+
+import { frontendEnv } from '@/shared/config/env';
 
 export function login(code: string) {
   return httpRequest<LoginResponse, LoginRequest>('/auth/login', {
@@ -36,8 +42,11 @@ export function fetchConversations() {
   return httpRequest<ConversationPreview[]>('/chat/conversations');
 }
 
-export function uploadPhoto(filePath: string) {
-  return uploadFile<{ url: string }>('/upload', filePath);
+export async function uploadPhoto(filePath: string): Promise<{ url: string }> {
+  const result = await uploadFile<{ url: string }>('/upload', filePath);
+  // 后端返回相对路径 /uploads/xxx，需要拼成完整 URL 供小程序加载
+  const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
+  return { url: `${serverBase}${result.url}` };
 }
 
 export function createRental(input: CreateRentalInput) {

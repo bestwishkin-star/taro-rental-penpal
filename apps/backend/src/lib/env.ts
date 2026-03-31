@@ -7,7 +7,8 @@ const envSchema = z.object({
   MYSQL_PASSWORD: z.string().default(''),
   MYSQL_DB: z.string().min(1).default('taro_rental_penpal'),
   WECHAT_APP_ID: z.string().default(''),
-  WECHAT_APP_SECRET: z.string().default('')
+  WECHAT_APP_SECRET: z.string().default(''),
+  JWT_SECRET: z.string().min(32)
 });
 
 export const env = envSchema.parse({
@@ -17,5 +18,6 @@ export const env = envSchema.parse({
   MYSQL_PASSWORD: process.env.MYSQL_PASSWORD,
   MYSQL_DB: process.env.MYSQL_DB,
   WECHAT_APP_ID: process.env.WECHAT_APP_ID,
-  WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET
+  WECHAT_APP_SECRET: process.env.WECHAT_APP_SECRET,
+  JWT_SECRET: process.env.JWT_SECRET
 });

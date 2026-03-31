@@ -34,7 +34,7 @@ interface RequestOptions<TBody> {
   method?: 'GET' | 'POST';
 }
 
-export async function uploadFile<TData>(path: string, filePath: string) {
+export async function uploadFile<TData>(path: string, filePath: string): Promise<TData> {
   const header: Record<string, string> = {};
   const token = getToken();
   if (token) {
@@ -64,7 +64,7 @@ export async function uploadFile<TData>(path: string, filePath: string) {
 export async function httpRequest<TData, TBody = undefined>(
   path: string,
   options: RequestOptions<TBody> = {}
-) {
+): Promise<TData> {
   const { body, method = 'GET' } = options;
   const header: Record<string, string> = {
     'content-type': 'application/json'

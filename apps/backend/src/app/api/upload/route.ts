@@ -4,26 +4,22 @@ import path from 'node:path';
 
 import { BizCode } from '@shared/errors';
 
+import { verifyToken } from '@/lib/jwt';
 import { fail, handleError, ok } from '@/lib/response';
-import { findUserByToken } from '@/modules/auth/auth.repository';
 
 // 关闭 Next.js 默认 body 解析，允许大文件上传
 export const config = {
   api: { bodyParser: false }
 };
 
-function extractToken(request: Request): string | null {
-  const auth = request.headers.get('authorization') ?? '';
-  return auth.startsWith('Bearer ') ? auth.slice(7) : null;
-}
-
 export async function POST(request: Request) {
   try {
-    const token = extractToken(request);
+    const auth = request.headers.get('authorization') ?? '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
     if (!token) return fail(BizCode.UNAUTHORIZED);
 
-    const user = await findUserByToken(token);
-    if (!user) return fail(BizCode.UNAUTHORIZED);
+    const payload = await verifyToken(token);
+    if (!payload) return fail(BizCode.UNAUTHORIZED);
 
     const formData = await request.formData();
     const file = formData.get('file');
