@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 
 import type { ApiResponse } from '@shared/contracts/api';
-import type { BizCodeValue } from '@shared/errors';
 import { BizCode, BizMessage } from '@shared/errors';
 
 import { AppError } from './errors';
+
+type BizCodeValue = (typeof BizCode)[keyof typeof BizCode];
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 

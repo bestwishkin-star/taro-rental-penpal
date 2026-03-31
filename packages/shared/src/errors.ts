@@ -1,5 +1,3 @@
-export type BizCodeValue = (typeof BizCode)[keyof typeof BizCode];
-
 export const BizCode = {
   // 成功
   OK: 0,

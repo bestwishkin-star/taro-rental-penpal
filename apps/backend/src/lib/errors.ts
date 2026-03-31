@@ -1,6 +1,6 @@
-import type { BizCodeValue } from '@shared/errors';
+import { BizCode, BizMessage } from '@shared/errors';
 
-import { BizMessage } from '@shared/errors';
+type BizCodeValue = (typeof BizCode)[keyof typeof BizCode];
 
 export class AppError extends Error {
   constructor(
