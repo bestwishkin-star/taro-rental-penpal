@@ -62,6 +62,35 @@ pnpm typecheck            # 类型检查
 **前端** (`src/shared/config/env.ts`):
 - `apiBaseUrl`: 后端 API 地址
 
+### 前端组件原子化规范
+
+页面组件必须按业务拆分，禁止将整个页面写在一个组件文件里。
+
+**目录结构**：
+
+```
+pages/<page>/
+├── components/          # 该页面专属业务组件
+│   └── <ComponentName>/
+│       ├── index.tsx
+│       └── index.scss
+├── assets/              # 该页面专属静态资源
+│   └── icons/
+├── index.tsx            # 页面入口，只负责状态管理和组合组件
+├── index.config.ts
+└── index.scss           # 只放页面级样式（覆盖、布局容器等）
+
+shared/ui/               # 跨页面公共组件（PageShell、LoginModal 等）
+shared/assets/           # 跨页面公共静态资源
+```
+
+**拆分原则**：
+- `index.tsx` 只做：状态管理、数据获取、组件组合，不写 UI 细节
+- 每个业务模块提取为独立组件（如 `PhotoUploader`、`FormSection`、`FormRow`）
+- 组件有自己的 SCSS 文件，使用组件名作为 CSS 类名前缀（BEM）
+- 页面专属资源放 `pages/<page>/assets/`，公共资源放 `shared/assets/`
+- 可复用的组件（跨页面使用）放 `shared/ui/`
+
 ### 图标与图片资源
 
 **禁止**使用字体图标（如 lucide、feather、iconfont）或 emoji 作为 UI 图标。
