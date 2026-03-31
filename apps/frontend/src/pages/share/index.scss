@@ -1,28 +1,288 @@
-.share-hero {
-  margin-bottom: 24px;
-  padding: 24px 20px;
+/* 覆盖 PageShell 为 tab 页设计的底部 padding，share 页有自己的底部按钮栏 */
+.page-shell__content {
+  padding-bottom: calc(94px + env(safe-area-inset-bottom));
+}
+
+/* ── Section ── */
+.share-section {
+  margin-bottom: 16px;
+  padding: 18px 16px;
   border-radius: 20px;
-  background: linear-gradient(135deg, #e8f0d8 0%, #d4e8b0 100%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(109, 84, 48, 0.08);
+  box-shadow: 0 4px 16px rgba(86, 61, 27, 0.06);
 }
 
-.share-hero__title {
+.share-section__title {
+  display: block;
   color: #2d241b;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
-.share-hero__subtitle {
-  color: #4a6630;
+.share-section__subtitle {
+  display: block;
+  color: #8b7761;
+  font-size: 12px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+/* ── Photo Grid ── */
+.share-photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.share-photo-item {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.share-photo-img {
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+}
+
+.share-photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.share-photo-remove__icon {
+  color: #fff;
   font-size: 14px;
+  line-height: 1;
 }
 
-.share-content {
-  padding: 40px 20px;
-  text-align: center;
+.share-photo-add {
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  background: #f5ede0;
+  border: 1.5px dashed rgba(193, 127, 74, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.share-placeholder {
+.share-photo-add__icon {
+  width: 28px;
+  height: 28px;
+}
+
+/* ── Form ── */
+.share-form {
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(109, 84, 48, 0.08);
+}
+
+.share-form-row {
+  display: flex;
+  align-items: center;
+  min-height: 52px;
+  padding: 0 14px;
+  gap: 10px;
+  background: #fff;
+}
+
+.share-form-row--picker {
+  cursor: pointer;
+}
+
+.share-form-row__icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.share-form-row__label {
+  color: #2d241b;
+  font-size: 14px;
+  font-weight: 600;
+  width: 68px;
+  flex-shrink: 0;
+}
+
+.share-form-row__input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.share-form-row__input {
+  color: #2d241b;
+  font-size: 14px;
+  height: 40px;
+}
+
+.share-form-row__input--flex {
+  flex: 1;
+}
+
+.share-form-row__unit {
   color: #8b7761;
   font-size: 14px;
+  flex-shrink: 0;
+}
+
+.share-form-row__unit--right {
+  margin-left: 2px;
+}
+
+.share-form-row__picker-value {
+  flex: 1;
+  color: #2d241b;
+  font-size: 14px;
+}
+
+.share-form-row__picker-value--placeholder {
+  color: #c5bab0;
+}
+
+.share-form-row__arrow {
+  color: #c5bab0;
+  font-size: 20px;
+  font-weight: 300;
+  flex-shrink: 0;
+}
+
+.share-form-divider {
+  height: 1px;
+  background: rgba(109, 84, 48, 0.07);
+  margin: 0 14px;
+}
+
+.share-input-placeholder {
+  color: #c5bab0;
+}
+
+/* ── Textarea ── */
+.share-textarea {
+  width: 100%;
+  min-height: 110px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #faf6ee;
+  border: 1px solid rgba(109, 84, 48, 0.1);
+  color: #2d241b;
+  font-size: 14px;
+  line-height: 1.7;
+  box-sizing: border-box;
+}
+
+/* ── Quick Tags ── */
+.share-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.share-tag {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #f0e8dc;
+  border: 1px solid transparent;
+}
+
+.share-tag--active {
+  background: rgba(193, 127, 74, 0.15);
+  border-color: #c17f4a;
+}
+
+.share-tag__text {
+  color: #8b5e3c;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.share-tag--active .share-tag__text {
+  color: #c17f4a;
+  font-weight: 700;
+}
+
+/* ── Privacy ── */
+.share-privacy {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #faf6ee;
+}
+
+.share-privacy__icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.share-privacy__text {
+  color: #8b7761;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ── Bottom Bar ── */
+.share-bottom {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom));
+  background: rgba(255, 253, 248, 0.96);
+  border-top: 1px solid rgba(109, 84, 48, 0.08);
+  backdrop-filter: blur(8px);
+}
+
+.share-submit {
+  width: 100%;
+  height: 50px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #c17f4a 0%, #8e5e2e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 20px rgba(193, 127, 74, 0.35);
+}
+
+.share-submit--hover {
+  opacity: 0.88;
+  transform: scale(0.98);
+}
+
+.share-submit--loading {
+  opacity: 0.7;
+}
+
+.share-submit__icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+}
+
+.share-submit__text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
 }

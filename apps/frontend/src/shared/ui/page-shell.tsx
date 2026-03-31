@@ -1,6 +1,6 @@
-import type { PropsWithChildren } from 'react';
+import { ScrollView, View } from '@tarojs/components';
 
-import { View } from '@tarojs/components';
+import type { PropsWithChildren } from 'react';
 
 import './page-shell.scss';
 
@@ -12,7 +12,9 @@ interface PageShellProps extends PropsWithChildren {
 export function PageShell({ children }: PageShellProps) {
   return (
     <View className="page-shell">
-      <View className="page-shell__content">{children}</View>
+      <ScrollView scrollY showScrollbar={false} className="page-shell__scroll">
+        <View className="page-shell__content">{children}</View>
+      </ScrollView>
     </View>
   );
 }

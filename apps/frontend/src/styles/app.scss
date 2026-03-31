@@ -1,5 +1,6 @@
 page {
-  min-height: 100%;
+  height: 100%;
+  overflow: hidden;
   color: #2d241b;
   font-family: 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
   background: #f5efe6;
@@ -8,6 +9,13 @@ page {
 view,
 text {
   box-sizing: border-box;
+}
+
+/* 隐藏所有 scroll-view 滚动条，showScrollbar={false} 为高版本基础库兜底 */
+::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  background: transparent;
 }
 
 text {
