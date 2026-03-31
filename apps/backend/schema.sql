@@ -27,11 +27,19 @@ CREATE TABLE IF NOT EXISTS conversations (
 );
 
 CREATE TABLE IF NOT EXISTS rentals (
-  id VARCHAR(64) PRIMARY KEY,
-  title VARCHAR(256) NOT NULL,
-  district VARCHAR(64) NOT NULL,
-  price VARCHAR(64) NOT NULL,
-  meta VARCHAR(256) NOT NULL,
+  id VARCHAR(36) PRIMARY KEY,
+  user_openid VARCHAR(64) NOT NULL,
+  price VARCHAR(50) NOT NULL,
+  location VARCHAR(255) NOT NULL,
+  room_type VARCHAR(20) NOT NULL,
+  area VARCHAR(50) NOT NULL DEFAULT '',
+  experience TEXT NOT NULL,
   tags JSON,
-  created_at DATETIME NOT NULL DEFAULT NOW()
+  wechat VARCHAR(100) NOT NULL DEFAULT '',
+  photos JSON,
+  status TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT NOW(),
+  updated_at DATETIME NOT NULL DEFAULT NOW(),
+  INDEX idx_user_openid (user_openid),
+  INDEX idx_status_created (status, created_at)
 );
