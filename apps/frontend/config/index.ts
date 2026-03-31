@@ -29,7 +29,9 @@ export default defineConfig<'webpack5'>({
     include: [path.resolve(__dirname, '..', '..', '..', 'packages', 'shared', 'src')]
   },
   copy: {
-    patterns: [],
+    patterns: [
+      { from: 'src/privacy.json', to: 'dist/privacy.json' }
+    ],
     options: {}
   },
   // @ts-expect-error: overridden by dev/prod spread

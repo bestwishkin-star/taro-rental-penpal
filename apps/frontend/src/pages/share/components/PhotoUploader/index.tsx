@@ -15,12 +15,16 @@ export function PhotoUploader({ photos, max = 9, onChange }: Props) {
   function handleAdd() {
     const remaining = max - photos.length;
     if (remaining <= 0) return;
-    void Taro.chooseImage({
-      count: remaining,
-      sizeType: ['compressed'],
-      sourceType: ['album', 'camera'],
-      success(res) {
-        onChange([...photos, ...res.tempFilePaths].slice(0, max));
+    Taro.requirePrivacyAuthorize({
+      success() {
+        void Taro.chooseImage({
+          count: remaining,
+          sizeType: ['compressed'],
+          sourceType: ['album', 'camera'],
+          success(res) {
+            onChange([...photos, ...res.tempFilePaths].slice(0, max));
+          }
+        });
       }
     });
   }

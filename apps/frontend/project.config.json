@@ -9,5 +9,6 @@
     "enhance": true,
     "postcss": true
   },
-  "compileType": "miniprogram"
+  "compileType": "miniprogram",
+  "__usePrivacyCheck__": true
 }

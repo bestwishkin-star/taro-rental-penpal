@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "privacyList": [
+    {
+      "apiName": "chooseImage",
+      "text": "用于上传房源实拍图片"
+    }
+  ]
+}
