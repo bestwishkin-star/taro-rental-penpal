@@ -34,6 +34,33 @@ interface RequestOptions<TBody> {
   method?: 'GET' | 'POST';
 }
 
+export async function uploadFile<TData>(path: string, filePath: string) {
+  const header: Record<string, string> = {};
+  const token = getToken();
+  if (token) {
+    header['authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await Taro.uploadFile({
+    url: `${frontendEnv.apiBaseUrl}${path}`,
+    filePath,
+    name: 'file',
+    header
+  });
+
+  if (response.statusCode >= 400) {
+    throw new BizError(BizCode.UNKNOWN, `上传失败 [${response.statusCode}]`);
+  }
+
+  const result = JSON.parse(response.data) as ApiResponse<TData>;
+
+  if (result.code !== BizCode.OK) {
+    throw new BizError(result.code, result.message);
+  }
+
+  return result.data as TData;
+}
+
 export async function httpRequest<TData, TBody = undefined>(
   path: string,
   options: RequestOptions<TBody> = {}

@@ -2,6 +2,8 @@ import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/compone
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
+import { createRental, uploadPhoto } from '@/shared/api/services';
+import { BizError } from '@/shared/api/http';
 import { PageShell } from '@/shared/ui/page-shell';
 
 import iconArea from './assets/icons/icon-area.png';
@@ -31,19 +33,36 @@ export default function SharePage() {
   const [wechat, setWechat] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!price) { void Taro.showToast({ title: '请填写月租价格', icon: 'none' }); return; }
     if (!location) { void Taro.showToast({ title: '请填写所在位置', icon: 'none' }); return; }
     if (roomTypeIndex < 0) { void Taro.showToast({ title: '请选择租住类型', icon: 'none' }); return; }
     if (!experience) { void Taro.showToast({ title: '请填写居住感受', icon: 'none' }); return; }
 
     setSubmitting(true);
-    // TODO: 调用后端 API 提交
-    setTimeout(() => {
-      setSubmitting(false);
+    try {
+      // 先上传图片，获取远端 URL
+      const photoUrls = await Promise.all(photos.map((p) => uploadPhoto(p).then((r) => r.url)));
+
+      await createRental({
+        price,
+        location,
+        roomType: ROOM_TYPES[roomTypeIndex],
+        area: area || undefined,
+        experience,
+        tags: selectedTags,
+        wechat: wechat || undefined,
+        photos: photoUrls
+      });
+
       void Taro.showToast({ title: '发布成功！', icon: 'success' });
       setTimeout(() => Taro.navigateBack(), 1500);
-    }, 1000);
+    } catch (err) {
+      const msg = err instanceof BizError ? err.message : '发布失败，请重试';
+      void Taro.showToast({ title: msg, icon: 'none' });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (

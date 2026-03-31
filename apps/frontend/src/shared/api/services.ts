@@ -1,9 +1,9 @@
-import { httpRequest } from './http';
+import { httpRequest, uploadFile } from './http';
 
 import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import type { ConversationPreview } from '@shared/contracts/chat';
 import type { OverviewPayload } from '@shared/contracts/overview';
-import type { RentalListing } from '@shared/contracts/rental';
+import type { CreateRentalInput, CreateRentalResponse, RentalListing } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 
 export function login(code: string) {
@@ -34,4 +34,15 @@ export function fetchRentals() {
 
 export function fetchConversations() {
   return httpRequest<ConversationPreview[]>('/chat/conversations');
+}
+
+export function uploadPhoto(filePath: string) {
+  return uploadFile<{ url: string }>('/upload', filePath);
+}
+
+export function createRental(input: CreateRentalInput) {
+  return httpRequest<CreateRentalResponse, CreateRentalInput>('/rentals', {
+    method: 'POST',
+    body: input
+  });
 }

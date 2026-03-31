@@ -6,3 +6,18 @@ export interface RentalListing {
   tags: string[];
   title: string;
 }
+
+export interface CreateRentalInput {
+  price: string;
+  location: string;
+  roomType: string;
+  area?: string;
+  experience: string;
+  tags: string[];
+  wechat?: string;
+  photos: string[];
+}
+
+export interface CreateRentalResponse {
+  id: string;
+}

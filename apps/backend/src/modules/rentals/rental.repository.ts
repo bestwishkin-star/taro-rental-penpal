@@ -1,6 +1,8 @@
+import { randomUUID } from 'node:crypto';
+
 import type { RowDataPacket } from 'mysql2/promise';
 
-import type { RentalListing } from '@shared/contracts/rental';
+import type { CreateRentalInput, RentalListing } from '@shared/contracts/rental';
 
 import { pool } from '@/lib/mysql';
 
@@ -39,6 +41,31 @@ const fallbackListings: RentalListing[] = [
     tags: ['WFH setup', 'Elevator', 'Low deposit']
   }
 ];
+
+export async function createRental(
+  userOpenid: string,
+  input: CreateRentalInput
+): Promise<{ id: string }> {
+  const id = randomUUID();
+  await pool.execute(
+    `INSERT INTO rentals
+      (id, user_openid, price, location, room_type, area, experience, tags, wechat, photos, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())`,
+    [
+      id,
+      userOpenid,
+      input.price,
+      input.location,
+      input.roomType,
+      input.area ?? '',
+      input.experience,
+      JSON.stringify(input.tags),
+      input.wechat ?? '',
+      JSON.stringify(input.photos)
+    ]
+  );
+  return { id };
+}
 
 export async function listRentals(): Promise<RentalListing[]> {
   try {
