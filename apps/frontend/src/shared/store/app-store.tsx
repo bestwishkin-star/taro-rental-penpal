@@ -1,3 +1,5 @@
+import React from 'react';
+
 import { useAuthStore } from './auth-store';
 
 import type { PropsWithChildren } from 'react';

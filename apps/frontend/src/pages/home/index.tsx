@@ -1,11 +1,11 @@
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 
-import { PageShell } from '@/shared/ui/page-shell';
-import { setTabBarSelected } from '@/shared/utils/tab-bar';
-
 import { ActionCard } from './components/ActionCard';
 import { HeroCarousel } from './components/HeroCarousel';
+
+import { PageShell } from '@/shared/ui/page-shell';
+import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import './index.scss';
 
