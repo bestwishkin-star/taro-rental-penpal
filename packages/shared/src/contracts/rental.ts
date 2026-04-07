@@ -1,10 +1,20 @@
 export interface RentalListing {
-  district: string;
   id: string;
-  meta: string;
-  price: string;
-  tags: string[];
   title: string;
+  location: string;
+  price: string;
+  area: string;
+  roomType: string;
+  tags: string[];
+  photos: string[];
+}
+
+export interface ListRentalsQuery {
+  keyword?: string;
+  filter?: string;
+  sort?: string;
+  page?: string;
+  pageSize?: string;
 }
 
 export interface CreateRentalInput {
