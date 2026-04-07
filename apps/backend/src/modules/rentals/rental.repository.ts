@@ -2,45 +2,29 @@ import { randomUUID } from 'node:crypto';
 
 import type { RowDataPacket } from 'mysql2/promise';
 
-import type { CreateRentalInput, RentalListing } from '@shared/contracts/rental';
+import type { CreateRentalInput, ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
 
 import { pool } from '@/lib/mysql';
 
 interface RentalRow extends RowDataPacket {
   id: string;
-  title: string;
-  district: string;
   price: string;
-  meta: string;
+  location: string;
+  room_type: string;
+  area: string;
   tags: string;
+  photos: string;
 }
 
-const fallbackListings: RentalListing[] = [
-  {
-    id: 'rental-1',
-    title: 'Metro-ready one bedroom with bright living room',
-    district: 'Chaoyang',
-    price: 'CNY 4,500 / month',
-    meta: 'Near line 6, available in 3 days, landlord verified',
-    tags: ['Near subway', 'Pet friendly', 'Flexible lease']
-  },
-  {
-    id: 'rental-2',
-    title: 'Shared apartment for two tidy roommates',
-    district: 'Pudong',
-    price: 'CNY 3,200 / room',
-    meta: 'Independent bathroom, coworking nearby, move in anytime',
-    tags: ['Roommate match', 'Bills split', 'Quiet community']
-  },
-  {
-    id: 'rental-3',
-    title: 'Studio for solo renters with work-from-home setup',
-    district: 'Yuhang',
-    price: 'CNY 3,900 / month',
-    meta: 'Desk included, elevator building, one month deposit',
-    tags: ['WFH setup', 'Elevator', 'Low deposit']
+function safeParseArray(value: string | null): string[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? (parsed as string[]) : [];
+  } catch {
+    return [];
   }
-];
+}
 
 export async function createRental(
   userOpenid: string,
@@ -67,23 +51,48 @@ export async function createRental(
   return { id };
 }
 
-export async function listRentals(): Promise<RentalListing[]> {
-  try {
-    const [rows] = await pool.execute<RentalRow[]>(
-      'SELECT id, title, district, price, meta, tags FROM rentals LIMIT 20'
-    );
+export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalListing[]> {
+  const { keyword, filter, sort } = query;
+  const pageSize = Math.min(50, Math.max(1, parseInt(query.pageSize ?? '10', 10) || 10));
+  const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
+  const offset = (page - 1) * pageSize;
 
-    if (rows.length === 0) return fallbackListings;
+  const conditions: string[] = ['status = 1'];
+  const params: string[] = [];
 
-    return rows.map((row) => ({
-      id: row.id,
-      title: row.title,
-      district: row.district,
-      price: row.price,
-      meta: row.meta,
-      tags: row.tags ? (JSON.parse(row.tags) as string[]) : []
-    }));
-  } catch {
-    return fallbackListings;
+  if (keyword) {
+    conditions.push('location LIKE ?');
+    params.push(`%${keyword}%`);
   }
+
+  if (filter === 'whole') {
+    conditions.push('room_type = ?');
+    params.push('整租');
+  } else if (filter === 'shared') {
+    conditions.push('room_type = ?');
+    params.push('合租');
+  } else if (filter === 'subway') {
+    conditions.push("JSON_SEARCH(tags, 'one', '交通便利') IS NOT NULL");
+  }
+
+  let orderBy = 'created_at DESC';
+  if (sort === 'price_asc') orderBy = 'CAST(price AS DECIMAL(10,2)) ASC';
+  else if (sort === 'price_desc') orderBy = 'CAST(price AS DECIMAL(10,2)) DESC';
+
+  const where = conditions.join(' AND ');
+  // pageSize 和 offset 已经过 parseInt + Math 验证为安全整数，直接内联避免 mysql2 二进制协议类型冲突
+  const sql = `SELECT id, price, location, room_type, area, tags, photos FROM rentals WHERE ${where} ORDER BY ${orderBy} LIMIT ${pageSize} OFFSET ${offset}`;
+
+  const [rows] = await pool.execute<RentalRow[]>(sql, params);
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: `${row.room_type} · ${row.location}`,
+    location: row.location,
+    price: row.price,
+    area: row.area,
+    roomType: row.room_type,
+    tags: safeParseArray(row.tags),
+    photos: safeParseArray(row.photos)
+  }));
 }

@@ -1,9 +1,9 @@
-import type { CreateRentalInput } from '@shared/contracts/rental';
+import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 
 import { createRental, listRentals } from './rental.repository';
 
-export async function readRentals() {
-  return listRentals();
+export async function readRentals(query: ListRentalsQuery = {}) {
+  return listRentals(query);
 }
 
 export async function publishRental(userOpenid: string, input: CreateRentalInput) {

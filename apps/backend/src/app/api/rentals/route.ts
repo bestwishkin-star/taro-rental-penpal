@@ -1,13 +1,20 @@
-import type { CreateRentalInput } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
+
+import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 
 import { verifyToken } from '@/lib/jwt';
 import { fail, handleError, ok } from '@/lib/response';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const rentals = await readRentals();
+    const { searchParams } = new URL(request.url);
+    const query: ListRentalsQuery = {
+      keyword: searchParams.get('keyword') ?? undefined,
+      filter: searchParams.get('filter') ?? undefined,
+      sort: searchParams.get('sort') ?? undefined
+    };
+    const rentals = await readRentals(query);
     return ok(rentals);
   } catch (error) {
     return handleError(error);
