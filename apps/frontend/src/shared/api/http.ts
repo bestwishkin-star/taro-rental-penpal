@@ -31,6 +31,7 @@ export class BizError extends Error {
 
 interface RequestOptions<TBody> {
   body?: TBody;
+  params?: Record<string, string | undefined>;
   method?: 'GET' | 'POST';
 }
 
@@ -65,7 +66,7 @@ export async function httpRequest<TData, TBody = undefined>(
   path: string,
   options: RequestOptions<TBody> = {}
 ): Promise<TData> {
-  const { body, method = 'GET' } = options;
+  const { body, params, method = 'GET' } = options;
   const header: Record<string, string> = {
     'content-type': 'application/json'
   };
@@ -78,7 +79,12 @@ export async function httpRequest<TData, TBody = undefined>(
   const response = await Taro.request<ApiResponse<TData>>({
     url: `${frontendEnv.apiBaseUrl}${path}`,
     method,
-    data: body,
+    data:
+      method === 'GET'
+        ? params
+          ? Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined))
+          : undefined
+        : body,
     header
   });
 

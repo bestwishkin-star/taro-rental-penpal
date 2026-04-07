@@ -6,6 +6,7 @@ import type { OverviewPayload } from '@shared/contracts/overview';
 import type {
   CreateRentalInput,
   CreateRentalResponse,
+  ListRentalsQuery,
   RentalListing
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
@@ -34,8 +35,14 @@ export function saveUserProfile(input: UserProfileInput) {
   });
 }
 
-export function fetchRentals() {
-  return httpRequest<RentalListing[]>('/rentals');
+export function fetchRentals(query?: ListRentalsQuery) {
+  const params: Record<string, string> = {};
+  if (query?.keyword) params.keyword = query.keyword;
+  if (query?.filter) params.filter = query.filter;
+  if (query?.sort) params.sort = query.sort;
+  if (query?.page) params.page = query.page;
+  if (query?.pageSize) params.pageSize = query.pageSize;
+  return httpRequest<RentalListing[]>('/rentals', Object.keys(params).length ? { params } : {});
 }
 
 export function fetchConversations() {
