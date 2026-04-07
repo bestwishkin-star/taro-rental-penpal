@@ -1,0 +1,35 @@
+.filter-chips {
+  width: 100%;
+
+  &__row {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    padding-right: 4px;
+  }
+
+  &__chip {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    background: #ffffff;
+    border: 1px solid #e5e2dc;
+
+    &--active {
+      background: #c67a52;
+      border-color: #c67a52;
+    }
+  }
+
+  &__label {
+    color: #6b6b6b;
+    font-size: 12px;
+    font-weight: 400;
+    white-space: nowrap;
+
+    &--active {
+      color: #ffffff;
+      font-weight: 600;
+    }
+  }
+}

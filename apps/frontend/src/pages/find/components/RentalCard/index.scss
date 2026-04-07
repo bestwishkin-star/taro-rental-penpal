@@ -1,0 +1,108 @@
+.rental-card {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+
+  &__image {
+    width: 88px;
+    height: 88px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    object-fit: cover;
+
+    &--placeholder {
+      background: #f5f2ec;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &__title {
+    color: #2c2c2c;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  &__tags {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  &__tag {
+    padding: 4px 8px;
+    border-radius: 4px;
+
+    &--accent {
+      background: rgba(198, 122, 82, 0.13);
+    }
+
+    &--green {
+      background: rgba(90, 158, 111, 0.13);
+    }
+
+    &--neutral {
+      background: #f5f2ec;
+    }
+  }
+
+  &__tag-text {
+    font-size: 11px;
+    font-weight: 400;
+
+    &--accent {
+      color: #c67a52;
+    }
+
+    &--green {
+      color: #5a9e6f;
+    }
+
+    &--neutral {
+      color: #6b6b6b;
+    }
+  }
+
+  &__meta {
+    color: #9a9a9a;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  &__price-row {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 2px;
+  }
+
+  &__price {
+    color: #c67a52;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+
+  &__price-unit {
+    color: #9a9a9a;
+    font-size: 12px;
+  }
+}

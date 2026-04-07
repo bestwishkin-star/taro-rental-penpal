@@ -1,28 +1,49 @@
-.find-hero {
-  margin-bottom: 24px;
-  padding: 24px 20px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #f8edd8 0%, #f0d9a8 100%);
+/* Override PageShell content padding */
+.page-shell__content {
+  padding: 16px 0 calc(100px + env(safe-area-inset-bottom));
 }
 
-.find-hero__title {
-  color: #2d241b;
-  font-size: 24px;
-  font-weight: 700;
-  margin-bottom: 6px;
+.find-controls {
+  padding: 0 16px;
+  margin-bottom: 8px;
+
+  &__search {
+    margin-bottom: 12px;
+  }
 }
 
-.find-hero__subtitle {
-  color: #6d5430;
-  font-size: 14px;
+.find-sort {
+  margin-bottom: 8px;
 }
 
-.find-content {
-  padding: 40px 20px;
-  text-align: center;
+.find-list {
+  padding: 0 16px;
+
+  &__item {
+    margin-bottom: 8px;
+  }
 }
 
-.find-placeholder {
-  color: #8b7761;
-  font-size: 14px;
+.find-empty {
+  padding: 48px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+
+  &__text {
+    color: #9a9a9a;
+    font-size: 14px;
+  }
+}
+
+.find-footer {
+  padding: 16px 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+
+  &__text {
+    color: #c5bab0;
+    font-size: 12px;
+  }
 }
