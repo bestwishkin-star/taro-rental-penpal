@@ -2,6 +2,7 @@ import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/compone
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
+
 import { BizError } from '@/shared/api/http';
 import { createRental } from '@/shared/api/services';
 import { PageShell } from '@/shared/ui/page-shell';
@@ -16,6 +17,7 @@ import { FormSection } from './components/FormSection';
 import { PhotoUploader } from './components/PhotoUploader';
 import { SubmitBar } from './components/SubmitBar';
 import { TagSelector } from './components/TagSelector';
+
 
 import './index.scss';
 

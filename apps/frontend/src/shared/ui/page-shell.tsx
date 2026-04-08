@@ -1,5 +1,4 @@
 import { ScrollView, View } from '@tarojs/components';
-
 import type { PropsWithChildren } from 'react';
 
 import './page-shell.scss';

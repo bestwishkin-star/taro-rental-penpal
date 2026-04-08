@@ -1,7 +1,7 @@
-import Taro from '@tarojs/taro';
 
 import type { ApiResponse } from '@shared/contracts/api';
 import { BizCode } from '@shared/errors';
+import Taro from '@tarojs/taro';
 
 import { frontendEnv } from '@/shared/config/env';
 

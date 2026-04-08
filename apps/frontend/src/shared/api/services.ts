@@ -1,5 +1,3 @@
-import { httpRequest, uploadFile } from './http';
-
 import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import type { ConversationPreview } from '@shared/contracts/chat';
 import type { OverviewPayload } from '@shared/contracts/overview';
@@ -7,11 +5,14 @@ import type {
   CreateRentalInput,
   CreateRentalResponse,
   ListRentalsQuery,
+  RentalDetail,
   RentalListing
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 
 import { frontendEnv } from '@/shared/config/env';
+
+import { httpRequest, uploadFile } from './http';
 
 export function login(code: string) {
   return httpRequest<LoginResponse, LoginRequest>('/auth/login', {
@@ -54,6 +55,10 @@ export async function uploadPhoto(filePath: string): Promise<{ url: string }> {
   // 后端返回相对路径 /uploads/xxx，需要拼成完整 URL 供小程序加载
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   return { url: `${serverBase}${result.url}` };
+}
+
+export function fetchRental(id: string) {
+  return httpRequest<RentalDetail>(`/rentals/${id}`);
 }
 
 export function createRental(input: CreateRentalInput) {

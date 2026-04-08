@@ -1,19 +1,17 @@
+import type { RentalListing } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-import type { RentalListing } from '@shared/contracts/rental';
 
 import { fetchRentals } from '@/shared/api/services';
 import { PageShell } from '@/shared/ui/page-shell';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import { FilterChips } from './components/FilterChips';
+import type { FilterValue } from './components/FilterChips';
 import { RentalCard } from './components/RentalCard';
 import { SearchBar } from './components/SearchBar';
 import { SortBar } from './components/SortBar';
-
-import type { FilterValue } from './components/FilterChips';
 import type { SortValue } from './components/SortBar';
 
 import './index.scss';
@@ -122,7 +120,10 @@ export default function FindPage() {
         )}
         {rentals.map((item) => (
           <View key={item.id} className="find-list__item">
-            <RentalCard item={item} />
+            <RentalCard
+              item={item}
+              onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })}
+            />
           </View>
         ))}
         {loadingMore && (
