@@ -59,9 +59,20 @@ export default tseslint.config(
             'internal',
             'parent',
             'sibling',
-            'index',
-            'type'
-          ]
+            'index'
+          ],
+          pathGroups: [
+            {
+              pattern: '@shared/**',
+              group: 'internal',
+              position: 'before'
+            },
+            {
+              pattern: '@/**',
+              group: 'internal'
+            }
+          ],
+          pathGroupsExcludedImportTypes: ['builtin', 'external', 'object']
         }
       ],
       'react/react-in-jsx-scope': 'off',
