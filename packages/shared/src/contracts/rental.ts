@@ -17,6 +17,11 @@ export interface ListRentalsQuery {
   pageSize?: string;
 }
 
+export interface RentalDetail extends RentalListing {
+  experience: string;
+  wechat: string;
+}
+
 export interface CreateRentalInput {
   price: string;
   location: string;
