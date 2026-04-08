@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
+import type {
+  CreateRentalInput,
+  ListRentalsQuery,
+  RentalDetail,
+  RentalListing
+} from '@shared/contracts/rental';
 import type { RowDataPacket } from 'mysql2/promise';
-
-import type { CreateRentalInput, ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
 
 import { pool } from '@/lib/mysql';
 
@@ -16,6 +20,11 @@ interface RentalRow extends RowDataPacket {
   photos: string;
 }
 
+interface RentalDetailRow extends RentalRow {
+  experience: string;
+  wechat: string;
+}
+
 function safeParseArray(value: string | null): string[] {
   if (!value) return [];
   try {
@@ -24,6 +33,27 @@ function safeParseArray(value: string | null): string[] {
   } catch {
     return [];
   }
+}
+
+export async function getRentalById(id: string): Promise<RentalDetail | null> {
+  const [rows] = await pool.execute<RentalDetailRow[]>(
+    'SELECT id, price, location, room_type, area, tags, photos, experience, wechat FROM rentals WHERE id = ? AND status = 1',
+    [id]
+  );
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    id: row.id,
+    title: `${row.room_type} · ${row.location}`,
+    location: row.location,
+    price: row.price,
+    area: row.area,
+    roomType: row.room_type,
+    tags: safeParseArray(row.tags),
+    photos: safeParseArray(row.photos),
+    experience: row.experience,
+    wechat: row.wechat
+  };
 }
 
 export async function createRental(

@@ -1,6 +1,6 @@
+import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
 
-import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 
 import { verifyToken } from '@/lib/jwt';
 import { fail, handleError, ok } from '@/lib/response';
