@@ -1,5 +1,3 @@
-import { randomUUID } from 'node:crypto';
-
 import type {
   CreateRentalInput,
   ListRentalsQuery,
@@ -9,6 +7,7 @@ import type {
 import type { RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
+import { generateId } from '@/lib/snowflake';
 
 interface RentalRow extends RowDataPacket {
   id: string;
@@ -60,7 +59,7 @@ export async function createRental(
   userOpenid: string,
   input: CreateRentalInput
 ): Promise<{ id: string }> {
-  const id = randomUUID();
+  const id = generateId();
   await pool.execute(
     `INSERT INTO rentals
       (id, user_openid, price, location, room_type, area, experience, tags, wechat, photos, status, created_at, updated_at)
