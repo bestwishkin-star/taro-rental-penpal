@@ -4,7 +4,8 @@ export default defineAppConfig({
     'pages/find/index',
     'pages/profile/index',
     'pages/share/index',
-    'pages/rental-detail/index'
+    'pages/rental-detail/index',
+    'pages/rental-list/index'
   ],
   window: {
     backgroundTextStyle: 'light',

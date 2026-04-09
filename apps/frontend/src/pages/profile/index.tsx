@@ -53,6 +53,11 @@ export default function ProfilePage() {
     void Taro.showToast({ title: '功能开发中', icon: 'none', duration: 2000 });
   }
 
+  function navigateTo(type: 'mine' | 'favorites' | 'history') {
+    if (!isLoggedIn && type !== 'history') { setShowLoginModal(true); return; }
+    void Taro.navigateTo({ url: `/pages/rental-list/index?type=${type}` });
+  }
+
   return (
     <PageShell>
       <ProfileHeader
@@ -63,18 +68,25 @@ export default function ProfilePage() {
 
       <View className="profile-menu">
         <ProfileMenuItem
-          icon="👤"
-          iconVariant="user"
-          label="个人资料"
-          desc="编辑个人信息和头像"
-          onClick={handleMenuClick}
+          icon="🏠"
+          iconVariant="house"
+          label="我的发布"
+          desc="查看我发布的房源"
+          onClick={() => navigateTo('mine')}
         />
         <ProfileMenuItem
           icon="❤️"
           iconVariant="heart"
           label="我的收藏"
           desc="查看收藏的房源"
-          onClick={handleMenuClick}
+          onClick={() => navigateTo('favorites')}
+        />
+        <ProfileMenuItem
+          icon="👀"
+          iconVariant="history"
+          label="浏览历史"
+          desc="最近看过的房源"
+          onClick={() => navigateTo('history')}
         />
         <ProfileMenuItem
           icon="⚙️"

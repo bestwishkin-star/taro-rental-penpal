@@ -1,5 +1,6 @@
 import type {
   CreateRentalInput,
+  FavoriteStatus,
   ListRentalsQuery,
   RentalDetail,
   RentalListing
@@ -114,6 +115,65 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
 
   const [rows] = await pool.execute<RentalRow[]>(sql, params);
 
+  return rows.map((row) => ({
+    id: row.id,
+    title: `${row.room_type} · ${row.location}`,
+    location: row.location,
+    price: row.price,
+    area: row.area,
+    roomType: row.room_type,
+    tags: safeParseArray(row.tags),
+    photos: safeParseArray(row.photos)
+  }));
+}
+
+export async function listMyRentals(userOpenid: string): Promise<RentalListing[]> {
+  const [rows] = await pool.execute<RentalRow[]>(
+    'SELECT id, price, location, room_type, area, tags, photos FROM rentals WHERE user_openid = ? AND status = 1 ORDER BY created_at DESC',
+    [userOpenid]
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    title: `${row.room_type} · ${row.location}`,
+    location: row.location,
+    price: row.price,
+    area: row.area,
+    roomType: row.room_type,
+    tags: safeParseArray(row.tags),
+    photos: safeParseArray(row.photos)
+  }));
+}
+
+export async function getFavoriteStatus(userOpenid: string, rentalId: string): Promise<FavoriteStatus> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    'SELECT 1 FROM favorites WHERE user_openid = ? AND rental_id = ?',
+    [userOpenid, rentalId]
+  );
+  return { isFavorited: rows.length > 0 };
+}
+
+export async function toggleFavorite(userOpenid: string, rentalId: string): Promise<FavoriteStatus> {
+  const { isFavorited } = await getFavoriteStatus(userOpenid, rentalId);
+  if (isFavorited) {
+    await pool.execute('DELETE FROM favorites WHERE user_openid = ? AND rental_id = ?', [userOpenid, rentalId]);
+    return { isFavorited: false };
+  }
+  await pool.execute(
+    'INSERT INTO favorites (user_openid, rental_id, created_at) VALUES (?, ?, NOW())',
+    [userOpenid, rentalId]
+  );
+  return { isFavorited: true };
+}
+
+export async function listFavorites(userOpenid: string): Promise<RentalListing[]> {
+  const [rows] = await pool.execute<RentalRow[]>(
+    `SELECT r.id, r.price, r.location, r.room_type, r.area, r.tags, r.photos
+     FROM rentals r
+     INNER JOIN favorites f ON r.id = f.rental_id
+     WHERE f.user_openid = ? AND r.status = 1
+     ORDER BY f.created_at DESC`,
+    [userOpenid]
+  );
   return rows.map((row) => ({
     id: row.id,
     title: `${row.room_type} · ${row.location}`,

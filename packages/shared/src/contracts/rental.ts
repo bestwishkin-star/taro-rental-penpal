@@ -36,3 +36,7 @@ export interface CreateRentalInput {
 export interface CreateRentalResponse {
   id: string;
 }
+
+export interface FavoriteStatus {
+  isFavorited: boolean;
+}

@@ -4,11 +4,13 @@ import type { OverviewPayload } from '@shared/contracts/overview';
 import type {
   CreateRentalInput,
   CreateRentalResponse,
+  FavoriteStatus,
   ListRentalsQuery,
   RentalDetail,
   RentalListing
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
+import Taro from '@tarojs/taro';
 
 import { frontendEnv } from '@/shared/config/env';
 
@@ -66,4 +68,33 @@ export function createRental(input: CreateRentalInput) {
     method: 'POST',
     body: input
   });
+}
+
+export function fetchMyRentals() {
+  return httpRequest<RentalListing[]>('/rentals/mine');
+}
+
+export function fetchFavorites() {
+  return httpRequest<RentalListing[]>('/user/favorites');
+}
+
+export function fetchFavoriteStatus(id: string) {
+  return httpRequest<FavoriteStatus>(`/rentals/${id}/favorite`);
+}
+
+export function toggleFavorite(id: string) {
+  return httpRequest<FavoriteStatus>(`/rentals/${id}/favorite`, { method: 'POST' });
+}
+
+const BROWSE_HISTORY_KEY = 'browse_history';
+const MAX_HISTORY = 30;
+
+export function saveToBrowseHistory(rental: RentalListing): void {
+  const existing: RentalListing[] = (Taro.getStorageSync(BROWSE_HISTORY_KEY)) || [];
+  const filtered = existing.filter((r) => r.id !== rental.id);
+  Taro.setStorageSync(BROWSE_HISTORY_KEY, [rental, ...filtered].slice(0, MAX_HISTORY));
+}
+
+export function getBrowseHistory(): RentalListing[] {
+  return (Taro.getStorageSync(BROWSE_HISTORY_KEY)) || [];
 }

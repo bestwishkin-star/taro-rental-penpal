@@ -43,3 +43,12 @@ CREATE TABLE IF NOT EXISTS rentals (
   INDEX idx_user_openid (user_openid),
   INDEX idx_status_created (status, created_at)
 );
+
+CREATE TABLE IF NOT EXISTS favorites (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_openid VARCHAR(64) NOT NULL,
+  rental_id VARCHAR(36) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT NOW(),
+  UNIQUE KEY uk_user_rental (user_openid, rental_id),
+  INDEX idx_user_openid (user_openid)
+);

@@ -3,8 +3,14 @@ import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/compo
 import Taro from '@tarojs/taro';
 import { useEffect, useState } from 'react';
 
-import { fetchRental } from '@/shared/api/services';
+import {
+  fetchFavoriteStatus,
+  fetchRental,
+  saveToBrowseHistory,
+  toggleFavorite
+} from '@/shared/api/services';
 import { frontendEnv } from '@/shared/config/env';
+import { useAuthStore } from '@/shared/store';
 
 import './index.scss';
 
@@ -25,6 +31,8 @@ function getTagStyle(tag: string): 'accent' | 'green' | 'neutral' {
 export default function RentalDetailPage() {
   const [rental, setRental] = useState<RentalDetail | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isFavorited, setIsFavorited] = useState(false);
+  const { isLoggedIn } = useAuthStore();
 
   useEffect(() => {
     const params = Taro.getCurrentInstance().router?.params ?? {};
@@ -33,17 +41,42 @@ export default function RentalDetailPage() {
       void Taro.showToast({ title: '参数错误', icon: 'none' });
       return;
     }
-    fetchRental(id)
-      .then((data) => setRental(data))
+    const tasks: [Promise<RentalDetail>, Promise<{ isFavorited: boolean } | null>] = [
+      fetchRental(id),
+      isLoggedIn ? fetchFavoriteStatus(id) : Promise.resolve(null)
+    ];
+    Promise.all(tasks)
+      .then(([data, favStatus]) => {
+        setRental(data);
+        saveToBrowseHistory(data);
+        if (favStatus) setIsFavorited(favStatus.isFavorited);
+      })
       .catch(() => void Taro.showToast({ title: '加载失败', icon: 'none' }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isLoggedIn]);
 
   function handleCopyWechat() {
     if (!rental?.wechat) return;
     void Taro.setClipboardData({ data: rental.wechat }).then(() => {
       void Taro.showToast({ title: '微信号已复制', icon: 'success' });
     });
+  }
+
+  function handleToggleFavorite() {
+    if (!isLoggedIn) {
+      void Taro.showToast({ title: '请先登录', icon: 'none' });
+      return;
+    }
+    if (!rental) return;
+    toggleFavorite(rental.id)
+      .then((status) => {
+        setIsFavorited(status.isFavorited);
+        void Taro.showToast({
+          title: status.isFavorited ? '已收藏' : '已取消收藏',
+          icon: 'none'
+        });
+      })
+      .catch(() => void Taro.showToast({ title: '操作失败', icon: 'none' }));
   }
 
   if (loading) {
@@ -72,7 +105,13 @@ export default function RentalDetailPage() {
         {/* 图片轮播 */}
         <View className="detail-gallery">
           {photos.length > 0 ? (
-            <Swiper className="detail-gallery__swiper" indicatorDots={photos.length > 1} indicatorColor="#ffffff80" indicatorActiveColor="#ffffff" circular>
+            <Swiper
+              className="detail-gallery__swiper"
+              indicatorDots={photos.length > 1}
+              indicatorColor="#ffffff80"
+              indicatorActiveColor="#ffffff"
+              circular
+            >
               {photos.map((url, i) => (
                 <SwiperItem key={i}>
                   <Image src={url} className="detail-gallery__img" mode="aspectFill" />
@@ -151,7 +190,6 @@ export default function RentalDetailPage() {
                   <Text className="detail-copy-btn__text">复制</Text>
                 </View>
               </View>
-              <Text className="detail-privacy">🔒 联系方式仅对你本人可见</Text>
             </View>
           ) : null}
         </View>
@@ -159,6 +197,9 @@ export default function RentalDetailPage() {
 
       {/* 底部操作栏 */}
       <View className="detail-bottom">
+        <View className="detail-fav-btn" onClick={handleToggleFavorite}>
+          <Text className="detail-fav-btn__text">{isFavorited ? '已收藏' : '收藏'}</Text>
+        </View>
         <View className="detail-cta" onClick={handleCopyWechat}>
           <Text className="detail-cta__text">联系房东</Text>
         </View>
