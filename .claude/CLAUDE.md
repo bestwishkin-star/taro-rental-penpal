@@ -6,7 +6,7 @@
 
 **技术栈**:
 - 前端: Taro v4 + React + TypeScript (微信小程序)
-- 后端: Next.js 15 App Router + MongoDB + TypeScript
+- 后端: Next.js 15 App Router + MySQL + TypeScript
 - 包管理: pnpm workspace
 
 ## 目录结构
@@ -56,8 +56,11 @@ pnpm typecheck            # 类型检查
 ## 环境变量
 
 **后端** (`.env.local`):
-- `MONGODB_URI`: MongoDB 连接字符串
-- `MONGODB_DB`: 数据库名称
+- `MYSQL_HOST`: MySQL 主机地址
+- `MYSQL_PORT`: MySQL 端口
+- `MYSQL_USER`: 数据库用户名
+- `MYSQL_PASSWORD`: 数据库密码
+- `MYSQL_DB`: 数据库名称
 
 **前端** (`src/shared/config/env.ts`):
 - `apiBaseUrl`: 后端 API 地址
@@ -144,7 +147,7 @@ import iconPrice from '@/assets/icons/share/icon-price.png';
 ## 注意事项
 
 - 前端设计稿宽度: 375px
-- MongoDB 使用全局单例模式
+- MySQL 使用全局连接池单例模式
 - 所有 API 响应遵循 `ApiResponse<T>` 格式
 - 支持多平台: 微信(weapp)、抖音(tt)、京东(jd)
 
