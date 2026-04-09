@@ -12,7 +12,10 @@ export async function GET(request: Request) {
     const query: ListRentalsQuery = {
       keyword: searchParams.get('keyword') ?? undefined,
       filter: searchParams.get('filter') ?? undefined,
-      sort: searchParams.get('sort') ?? undefined
+      sort: searchParams.get('sort') ?? undefined,
+      page: searchParams.get('page') ?? undefined,
+      pageSize: searchParams.get('pageSize') ?? undefined,
+      priceRange: (searchParams.get('priceRange') as ListRentalsQuery['priceRange']) ?? undefined
     };
     const rentals = await readRentals(query);
     return ok(rentals);

@@ -20,4 +20,35 @@
   &__item {
     margin-bottom: 12px;
   }
+
+  &__card-wrap {
+    position: relative;
+  }
+
+  &__badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    z-index: 1;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: 4px;
+    padding: 2px 8px;
+  }
+
+  &__badge-text {
+    color: #fff;
+    font-size: 11px;
+  }
+
+  &__status-btn {
+    margin-top: 8px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__status-btn-text {
+    font-size: 12px;
+    color: #c67a52;
+    padding: 4px 0;
+  }
 }

@@ -1,4 +1,4 @@
-import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
+import type { CreateRentalInput, ListRentalsQuery, RentalStatus } from '@shared/contracts/rental';
 
 import {
   createRental,
@@ -7,7 +7,8 @@ import {
   listFavorites,
   listMyRentals,
   listRentals,
-  toggleFavorite
+  toggleFavorite,
+  updateRentalStatus
 } from './rental.repository';
 
 export async function readRentals(query: ListRentalsQuery = {}) {
@@ -36,4 +37,8 @@ export async function readFavoriteStatus(userOpenid: string, rentalId: string) {
 
 export async function switchFavorite(userOpenid: string, rentalId: string) {
   return toggleFavorite(userOpenid, rentalId);
+}
+
+export async function changeRentalStatus(id: string, openid: string, status: RentalStatus) {
+  return updateRentalStatus(id, openid, status === 'active' ? 1 : 0);
 }

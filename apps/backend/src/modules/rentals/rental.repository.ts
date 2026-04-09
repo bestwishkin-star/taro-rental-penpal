@@ -3,7 +3,8 @@ import type {
   FavoriteStatus,
   ListRentalsQuery,
   RentalDetail,
-  RentalListing
+  RentalListing,
+  RentalStatus
 } from '@shared/contracts/rental';
 import type { RowDataPacket } from 'mysql2/promise';
 
@@ -18,6 +19,7 @@ interface RentalRow extends RowDataPacket {
   area: string;
   tags: string;
   photos: string;
+  status: number;
 }
 
 interface RentalDetailRow extends RentalRow {
@@ -35,9 +37,13 @@ function safeParseArray(value: string | null): string[] {
   }
 }
 
+function mapStatus(status: number): RentalStatus {
+  return status === 1 ? 'active' : 'inactive';
+}
+
 export async function getRentalById(id: string): Promise<RentalDetail | null> {
   const [rows] = await pool.execute<RentalDetailRow[]>(
-    'SELECT id, price, location, room_type, area, tags, photos, experience, wechat FROM rentals WHERE id = ? AND status = 1',
+    'SELECT id, price, location, room_type, area, tags, photos, experience, wechat, status FROM rentals WHERE id = ? AND status = 1',
     [id]
   );
   if (rows.length === 0) return null;
@@ -51,6 +57,7 @@ export async function getRentalById(id: string): Promise<RentalDetail | null> {
     roomType: row.room_type,
     tags: safeParseArray(row.tags),
     photos: safeParseArray(row.photos),
+    status: mapStatus(row.status),
     experience: row.experience,
     wechat: row.wechat
   };
@@ -82,13 +89,13 @@ export async function createRental(
 }
 
 export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalListing[]> {
-  const { keyword, filter, sort } = query;
+  const { keyword, filter, sort, priceRange } = query;
   const pageSize = Math.min(50, Math.max(1, parseInt(query.pageSize ?? '10', 10) || 10));
   const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
   const offset = (page - 1) * pageSize;
 
   const conditions: string[] = ['status = 1'];
-  const params: string[] = [];
+  const params: (string | number)[] = [];
 
   if (keyword) {
     conditions.push('location LIKE ?');
@@ -101,8 +108,19 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
   } else if (filter === 'shared') {
     conditions.push('room_type = ?');
     params.push('合租');
+  } else if (filter === 'single') {
+    conditions.push('room_type = ?');
+    params.push('单间');
   } else if (filter === 'subway') {
     conditions.push("JSON_SEARCH(tags, 'one', '交通便利') IS NOT NULL");
+  }
+
+  if (priceRange === 'lt2000') {
+    conditions.push('CAST(price AS UNSIGNED) < 2000');
+  } else if (priceRange === '2000to4000') {
+    conditions.push('CAST(price AS UNSIGNED) BETWEEN 2000 AND 4000');
+  } else if (priceRange === 'gt4000') {
+    conditions.push('CAST(price AS UNSIGNED) > 4000');
   }
 
   let orderBy = 'created_at DESC';
@@ -111,7 +129,7 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
 
   const where = conditions.join(' AND ');
   // pageSize 和 offset 已经过 parseInt + Math 验证为安全整数，直接内联避免 mysql2 二进制协议类型冲突
-  const sql = `SELECT id, price, location, room_type, area, tags, photos FROM rentals WHERE ${where} ORDER BY ${orderBy} LIMIT ${pageSize} OFFSET ${offset}`;
+  const sql = `SELECT id, price, location, room_type, area, tags, photos, status FROM rentals WHERE ${where} ORDER BY ${orderBy} LIMIT ${pageSize} OFFSET ${offset}`;
 
   const [rows] = await pool.execute<RentalRow[]>(sql, params);
 
@@ -123,13 +141,14 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
     area: row.area,
     roomType: row.room_type,
     tags: safeParseArray(row.tags),
-    photos: safeParseArray(row.photos)
+    photos: safeParseArray(row.photos),
+    status: mapStatus(row.status)
   }));
 }
 
 export async function listMyRentals(userOpenid: string): Promise<RentalListing[]> {
   const [rows] = await pool.execute<RentalRow[]>(
-    'SELECT id, price, location, room_type, area, tags, photos FROM rentals WHERE user_openid = ? AND status = 1 ORDER BY created_at DESC',
+    'SELECT id, price, location, room_type, area, tags, photos, status FROM rentals WHERE user_openid = ? ORDER BY created_at DESC',
     [userOpenid]
   );
   return rows.map((row) => ({
@@ -140,8 +159,21 @@ export async function listMyRentals(userOpenid: string): Promise<RentalListing[]
     area: row.area,
     roomType: row.room_type,
     tags: safeParseArray(row.tags),
-    photos: safeParseArray(row.photos)
+    photos: safeParseArray(row.photos),
+    status: mapStatus(row.status)
   }));
+}
+
+export async function updateRentalStatus(
+  id: string,
+  openid: string,
+  status: 0 | 1
+): Promise<boolean> {
+  const [result] = await pool.execute<import('mysql2/promise').ResultSetHeader>(
+    'UPDATE rentals SET status = ?, updated_at = NOW() WHERE id = ? AND user_openid = ?',
+    [status, id, openid]
+  );
+  return result.affectedRows > 0;
 }
 
 export async function getFavoriteStatus(userOpenid: string, rentalId: string): Promise<FavoriteStatus> {
@@ -167,7 +199,7 @@ export async function toggleFavorite(userOpenid: string, rentalId: string): Prom
 
 export async function listFavorites(userOpenid: string): Promise<RentalListing[]> {
   const [rows] = await pool.execute<RentalRow[]>(
-    `SELECT r.id, r.price, r.location, r.room_type, r.area, r.tags, r.photos
+    `SELECT r.id, r.price, r.location, r.room_type, r.area, r.tags, r.photos, r.status
      FROM rentals r
      INNER JOIN favorites f ON r.id = f.rental_id
      WHERE f.user_openid = ? AND r.status = 1
@@ -182,6 +214,7 @@ export async function listFavorites(userOpenid: string): Promise<RentalListing[]
     area: row.area,
     roomType: row.room_type,
     tags: safeParseArray(row.tags),
-    photos: safeParseArray(row.photos)
+    photos: safeParseArray(row.photos),
+    status: mapStatus(row.status)
   }));
 }

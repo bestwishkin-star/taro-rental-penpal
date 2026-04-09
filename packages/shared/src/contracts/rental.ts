@@ -1,3 +1,5 @@
+export type RentalStatus = 'active' | 'inactive';
+
 export interface RentalListing {
   id: string;
   title: string;
@@ -7,6 +9,7 @@ export interface RentalListing {
   roomType: string;
   tags: string[];
   photos: string[];
+  status: RentalStatus;
 }
 
 export interface ListRentalsQuery {
@@ -15,6 +18,7 @@ export interface ListRentalsQuery {
   sort?: string;
   page?: string;
   pageSize?: string;
+  priceRange?: 'lt2000' | '2000to4000' | 'gt4000';
 }
 
 export interface RentalDetail extends RentalListing {
@@ -39,4 +43,8 @@ export interface CreateRentalResponse {
 
 export interface FavoriteStatus {
   isFavorited: boolean;
+}
+
+export interface UpdateRentalStatusInput {
+  status: RentalStatus;
 }

@@ -32,7 +32,7 @@ export class BizError extends Error {
 interface RequestOptions<TBody> {
   body?: TBody;
   params?: Record<string, string | undefined>;
-  method?: 'GET' | 'POST';
+  method?: 'GET' | 'POST' | 'PATCH';
 }
 
 export async function uploadFile<TData>(path: string, filePath: string): Promise<TData> {

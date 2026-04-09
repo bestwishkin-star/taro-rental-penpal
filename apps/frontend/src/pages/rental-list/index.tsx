@@ -1,10 +1,10 @@
-import type { RentalListing } from '@shared/contracts/rental';
+import type { RentalListing, RentalStatus } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useEffect, useRef, useState } from 'react';
 
 import { RentalCard } from '@/pages/find/components/RentalCard';
-import { fetchFavorites, fetchMyRentals, getBrowseHistory } from '@/shared/api/services';
+import { fetchFavorites, fetchMyRentals, getBrowseHistory, updateRentalStatus } from '@/shared/api/services';
 
 import './index.scss';
 
@@ -52,6 +52,20 @@ export default function RentalListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  async function handleToggleStatus(id: string, currentStatus: RentalStatus) {
+    const nextStatus: RentalStatus = currentStatus === 'active' ? 'inactive' : 'active';
+    try {
+      await updateRentalStatus(id, nextStatus);
+      setRentals((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: nextStatus } : r))
+      );
+    } catch {
+      void Taro.showToast({ title: '操作失败，请重试', icon: 'none' });
+    }
+  }
+
+  const isMine = typeRef.current === 'mine';
+
   return (
     <View className="rental-list-page">
       {loading && (
@@ -66,10 +80,27 @@ export default function RentalListPage() {
       )}
       {rentals.map((item) => (
         <View key={item.id} className="rental-list-page__item">
-          <RentalCard
-            item={item}
-            onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })}
-          />
+          <View className="rental-list-page__card-wrap">
+            {item.status === 'inactive' && (
+              <View className="rental-list-page__badge">
+                <Text className="rental-list-page__badge-text">已下架</Text>
+              </View>
+            )}
+            <RentalCard
+              item={item}
+              onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })}
+            />
+            {isMine && (
+              <View
+                className="rental-list-page__status-btn"
+                onClick={() => void handleToggleStatus(item.id, item.status)}
+              >
+                <Text className="rental-list-page__status-btn-text">
+                  {item.status === 'active' ? '下架' : '重新上架'}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       ))}
     </View>

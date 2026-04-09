@@ -1,14 +1,15 @@
-import type { RentalListing } from '@shared/contracts/rental';
+import type { ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchRentals } from '@/shared/api/services';
+import EmptyState from '@/shared/ui/empty-state';
 import { PageShell } from '@/shared/ui/page-shell';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
+import type { FilterValue, PriceRange } from './components/FilterChips';
 import { FilterChips } from './components/FilterChips';
-import type { FilterValue } from './components/FilterChips';
 import { RentalCard } from './components/RentalCard';
 import { SearchBar } from './components/SearchBar';
 import { SortBar } from './components/SortBar';
@@ -22,6 +23,7 @@ export default function FindPage() {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [filter, setFilter] = useState<FilterValue>('all');
+  const [priceRange, setPriceRange] = useState<PriceRange>(undefined);
   const [sort, setSort] = useState<SortValue>('default');
   const [rentals, setRentals] = useState<RentalListing[]>([]);
   const [page, setPage] = useState(1);
@@ -50,13 +52,15 @@ export default function FindPage() {
       else setLoading(true);
 
       try {
-        const data = await fetchRentals({
+        const query: ListRentalsQuery = {
           keyword: debouncedKeyword || undefined,
           filter: filter === 'all' ? undefined : filter,
           sort: sort === 'default' ? undefined : sort,
           page: String(pageNum),
-          pageSize: String(PAGE_SIZE)
-        });
+          pageSize: String(PAGE_SIZE),
+          priceRange
+        };
+        const data = await fetchRentals(query);
         setRentals((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
         setPage(pageNum);
@@ -69,7 +73,7 @@ export default function FindPage() {
         requestingRef.current = false;
       }
     },
-    [debouncedKeyword, filter, sort]
+    [debouncedKeyword, filter, priceRange, sort]
   );
 
   // 搜索/筛选/排序变化时重置到第 1 页
@@ -89,6 +93,13 @@ export default function FindPage() {
     void loadPage(page + 1, true);
   }
 
+  function handleReset() {
+    setKeyword('');
+    setFilter('all');
+    setPriceRange(undefined);
+    setSort('default');
+  }
+
   return (
     <PageShell
       refresherEnabled
@@ -100,7 +111,12 @@ export default function FindPage() {
         <View className="find-controls__search">
           <SearchBar value={keyword} onChange={setKeyword} />
         </View>
-        <FilterChips active={filter} onChange={setFilter} />
+        <FilterChips
+          filter={filter}
+          priceRange={priceRange}
+          onFilterChange={setFilter}
+          onPriceRangeChange={setPriceRange}
+        />
       </View>
 
       <View className="find-sort">
@@ -114,9 +130,7 @@ export default function FindPage() {
           </View>
         )}
         {!loading && rentals.length === 0 && (
-          <View className="find-empty">
-            <Text className="find-empty__text">暂无符合条件的房源</Text>
-          </View>
+          <EmptyState onReset={handleReset} />
         )}
         {rentals.map((item) => (
           <View key={item.id} className="find-list__item">

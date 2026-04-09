@@ -7,7 +7,9 @@ import type {
   FavoriteStatus,
   ListRentalsQuery,
   RentalDetail,
-  RentalListing
+  RentalListing,
+  RentalStatus,
+  UpdateRentalStatusInput
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 import Taro from '@tarojs/taro';
@@ -45,7 +47,15 @@ export function fetchRentals(query?: ListRentalsQuery) {
   if (query?.sort) params.sort = query.sort;
   if (query?.page) params.page = query.page;
   if (query?.pageSize) params.pageSize = query.pageSize;
+  if (query?.priceRange) params.priceRange = query.priceRange;
   return httpRequest<RentalListing[]>('/rentals', Object.keys(params).length ? { params } : {});
+}
+
+export function updateRentalStatus(id: string, status: RentalStatus) {
+  return httpRequest<null, UpdateRentalStatusInput>(`/rentals/${id}/status`, {
+    method: 'PATCH',
+    body: { status }
+  });
 }
 
 export function fetchConversations() {
