@@ -23,3 +23,6 @@ coverage
 apps/frontend/dist
 apps/frontend/.swc
 apps/backend/.next
+
+# Git worktrees
+.worktrees/
