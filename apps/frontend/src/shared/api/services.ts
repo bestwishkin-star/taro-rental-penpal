@@ -35,7 +35,7 @@ export function fetchUserProfile() {
 
 export function saveUserProfile(input: UserProfileInput) {
   return httpRequest<UserProfile, UserProfileInput>('/user/profile', {
-    method: 'POST',
+    method: 'PUT',
     body: input
   });
 }
