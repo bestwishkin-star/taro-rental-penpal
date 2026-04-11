@@ -1,0 +1,50 @@
+.settings-page {
+  min-height: 100vh;
+  background: #f7f3ec;
+  padding-bottom: 40px;
+}
+
+.settings-page__actions {
+  margin: 24px 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-page__save {
+  width: 100%;
+  height: 48px;
+  background: #2d241b;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::after {
+    border: none;
+  }
+
+  &--loading {
+    opacity: 0.6;
+  }
+}
+
+.settings-page__logout {
+  width: 100%;
+  height: 48px;
+  background: transparent;
+  color: #c0392b;
+  font-size: 15px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &::after {
+    border: none;
+  }
+}
