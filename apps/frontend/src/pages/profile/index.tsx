@@ -62,6 +62,11 @@ export default function ProfilePage() {
     void Taro.navigateTo({ url: `/pages/rental-list/index?type=${type}` });
   }
 
+  function navigateToSettings() {
+    if (!isLoggedIn) { setShowLoginModal(true); return; }
+    void Taro.navigateTo({ url: '/pages/settings/index' });
+  }
+
   return (
     <PageShell>
       <ProfileHeader
@@ -93,7 +98,7 @@ export default function ProfilePage() {
           icon={iconSettings}
           label="设置"
           desc="账号与隐私设置"
-          onClick={handleMenuClick}
+          onClick={navigateToSettings}
         />
       </View>
 
