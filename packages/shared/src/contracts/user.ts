@@ -11,6 +11,7 @@ export interface UserProfile {
 }
 
 export interface UserProfileInput {
+  avatarUrl?: string;
   budget: string;
   city: string;
   moveInDate: string;
