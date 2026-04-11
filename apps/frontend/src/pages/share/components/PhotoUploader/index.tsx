@@ -2,6 +2,7 @@ import { Image, Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
+import iconClose from '@/assets/icons/common/icon-close.png';
 import { uploadPhoto } from '@/shared/api/services';
 import { useAuthStore } from '@/shared/store';
 
@@ -62,7 +63,7 @@ export function PhotoUploader({ photos, max = 9, onChange }: Props) {
         <View key={i} className="photo-uploader__item">
           <View className="photo-uploader__img" style={{ backgroundImage: `url(${uri})` }} />
           <View className="photo-uploader__remove" onClick={() => handleRemove(i)}>
-            <Text className="photo-uploader__remove-icon">×</Text>
+            <Image src={iconClose} className="photo-uploader__remove-icon" mode="aspectFit" />
           </View>
         </View>
       ))}

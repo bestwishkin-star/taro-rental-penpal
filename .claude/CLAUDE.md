@@ -144,6 +144,45 @@ import iconPrice from '@/assets/icons/share/icon-price.png';
 }
 ```
 
+## 标准开发工作流
+
+每个功能迭代必须按以下五步顺序执行，每步完成后再进入下一步。
+
+### 步骤一：规划设计 `/brainstorming`
+
+调用 `brainstorming` skill，产物：
+- 需求澄清与方案对比
+- 设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- 实施计划 → `docs/superpowers/plans/YYYY-MM-DD-<topic>-plan.md`
+
+### 步骤二：UI/UX 设计 `/ui-ux-pro-max`
+
+调用 `ui-ux-pro-max` skill，结合 Pencil MCP 工具进行视觉设计：
+- 在 `.pen` 文件中完成页面/组件设计稿（375px 宽度）
+- 从设计稿导出图标和切图（`mcp__pencil__export_nodes`，scale:2，png）
+- 输出至 `apps/frontend/src/assets/icons/<页面名>/`
+
+### 步骤三：编写单测用例 `/test-driven-development`
+
+调用 `test-driven-development` skill，在编码前先写测试：
+- 后端：针对 service/repository 写单元测试
+- 前端：针对关键组件/hooks 写测试用例
+- 测试通过标准在编码阶段作为验收依据
+
+### 步骤四：编码实现
+
+按实施计划逐步实现，遵循本文件的架构规范和组件原子化规范。
+从 Pencil 设计稿取色值、尺寸和切图，不自行发明 UI 细节。
+
+### 步骤五：测试验收 `/document-skills:webapp-testing`
+
+调用 `document-skills:webapp-testing` skill：
+- 运行已编写的单测，确认全部通过
+- 使用 Playwright 进行端到端交互验证
+- 截图对照设计稿确认还原度
+
+---
+
 ## 注意事项
 
 - 前端设计稿宽度: 375px
@@ -153,4 +192,4 @@ import iconPrice from '@/assets/icons/share/icon-price.png';
 
 ---
 
-**最后更新**: 2026-04-07
+**最后更新**: 2026-04-09

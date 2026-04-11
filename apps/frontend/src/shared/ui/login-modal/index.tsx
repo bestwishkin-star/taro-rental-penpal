@@ -1,5 +1,6 @@
-import { View, Text } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import { Image, Text, View } from '@tarojs/components';
+
+import iconLock from '@/assets/icons/common/icon-lock.png';
 
 import './index.scss';
 
@@ -25,9 +26,7 @@ export function LoginModal({ visible, onClose, onLogin }: LoginModalProps) {
       <View className="login-modal__overlay" onClick={handleCancel}>
         <View className="login-modal__card" onClick={(e) => e.stopPropagation()}>
           <View className="login-modal__header">
-            <View className="login-modal__icon">
-              <Text className="login-modal__icon-text">🔒</Text>
-            </View>
+            <Image src={iconLock} className="login-modal__icon" mode="aspectFit" />
             <Text className="login-modal__title">需要登录</Text>
             <Text className="login-modal__desc">登录后即可查看个人信息和使用更多功能</Text>
           </View>

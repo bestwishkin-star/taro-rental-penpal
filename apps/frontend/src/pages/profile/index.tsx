@@ -2,6 +2,10 @@ import { View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useState } from 'react';
 
+import iconFavorite from '@/assets/icons/profile/icon-favorite.png';
+import iconHistory from '@/assets/icons/profile/icon-history.png';
+import iconPublish from '@/assets/icons/profile/icon-publish.png';
+import iconSettings from '@/assets/icons/profile/icon-settings.png';
 import { login } from '@/shared/api/services';
 import { useAppStore } from '@/shared/store/app-store';
 import { LoginModal } from '@/shared/ui/login-modal';
@@ -68,29 +72,25 @@ export default function ProfilePage() {
 
       <View className="profile-menu">
         <ProfileMenuItem
-          icon="🏠"
-          iconVariant="house"
+          icon={iconPublish}
           label="我的发布"
           desc="查看我发布的房源"
           onClick={() => navigateTo('mine')}
         />
         <ProfileMenuItem
-          icon="❤️"
-          iconVariant="heart"
+          icon={iconFavorite}
           label="我的收藏"
           desc="查看收藏的房源"
           onClick={() => navigateTo('favorites')}
         />
         <ProfileMenuItem
-          icon="👀"
-          iconVariant="history"
+          icon={iconHistory}
           label="浏览历史"
           desc="最近看过的房源"
           onClick={() => navigateTo('history')}
         />
         <ProfileMenuItem
-          icon="⚙️"
-          iconVariant="settings"
+          icon={iconSettings}
           label="设置"
           desc="账号与隐私设置"
           onClick={handleMenuClick}

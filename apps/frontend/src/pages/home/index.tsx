@@ -1,6 +1,8 @@
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 
+import iconFind from '@/assets/icons/home/icon-find.png';
+import iconShare from '@/assets/icons/home/icon-share.png';
 import { PageShell } from '@/shared/ui/page-shell';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
@@ -21,17 +23,15 @@ export default function HomePage() {
 
       <View className="home-actions">
         <ActionCard
-          icon="🏠"
+          icon={iconFind}
           label="我要找房"
           desc="浏览附近房源，找到心仪的住所"
-          variant="find"
           onClick={() => void Taro.switchTab({ url: '/pages/find/index' })}
         />
         <ActionCard
-          icon="📋"
+          icon={iconShare}
           label="我要分享"
           desc="发布你的房源信息，寻找合适的室友"
-          variant="share"
           onClick={() => void Taro.navigateTo({ url: '/pages/share/index' })}
         />
       </View>
