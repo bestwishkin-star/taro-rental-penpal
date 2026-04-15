@@ -2,9 +2,9 @@ import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/compone
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
-
 import { BizError } from '@/shared/api/http';
 import { createRental } from '@/shared/api/services';
+import { useAuthStore } from '@/shared/store';
 import { PageShell } from '@/shared/ui/page-shell';
 
 import iconArea from './assets/icons/icon-area.png';
@@ -25,6 +25,7 @@ const QUICK_TAGS = ['交通便利', '环境安静', '采光好', '性价比高',
 const ROOM_TYPES = ['整租', '合租'];
 
 export default function SharePage() {
+  const { profileStats, patchProfileStats } = useAuthStore();
   const [photos, setPhotos] = useState<string[]>([]);
   const [price, setPrice] = useState('');
   const [location, setLocation] = useState('');
@@ -56,6 +57,9 @@ export default function SharePage() {
       });
 
       void Taro.showToast({ title: '发布成功！', icon: 'success' });
+      patchProfileStats({
+        publishCount: profileStats.publishCount + 1
+      });
       setTimeout(() => Taro.navigateBack(), 1500);
     } catch (err) {
       const msg = err instanceof BizError ? err.message : '发布失败，请重试';

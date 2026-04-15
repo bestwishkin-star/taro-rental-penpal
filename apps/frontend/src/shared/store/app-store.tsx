@@ -1,10 +1,9 @@
 import React from 'react';
-
-import { useAuthStore } from './auth-store';
-
 import type { PropsWithChildren } from 'react';
 
 import { frontendEnv } from '@/shared/config/env';
+
+import { useAuthStore } from './auth-store';
 
 /**
  * @deprecated 使用 useAuthStore 替代

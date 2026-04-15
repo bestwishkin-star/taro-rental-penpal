@@ -10,7 +10,8 @@
     "dev:jd": "cross-env NODE_ENV=development taro build --type jd --watch",
     "build:jd": "cross-env NODE_ENV=production taro build --type jd",
     "lint": "eslint . --ext .ts,.tsx",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@rental-penpal/shared": "workspace:*",
@@ -37,6 +38,7 @@
     "@types/react-dom": "^18.3.5",
     "babel-preset-taro": "^4.1.11",
     "cross-env": "^7.0.3",
-    "sass": "^1.85.1"
+    "sass": "^1.85.1",
+    "vitest": "^3.2.4"
   }
 }

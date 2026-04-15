@@ -1,33 +1,61 @@
+﻿import type { LoginResponse } from '@shared/contracts/auth';
+import type { UserProfile } from '@shared/contracts/user';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
+import { getToken, removeToken, setToken } from '@/shared/api/http';
+
 import { taroStorage } from './taro-storage';
 
-import type { LoginResponse } from '@shared/contracts/auth';
-import type { UserProfile } from '@shared/contracts/user';
-
-import { getToken, removeToken, setToken } from '@/shared/api/http';
+interface ProfileStats {
+  publishCount: number;
+  favoriteCount: number;
+  browseCount: number;
+}
 
 interface AuthState {
   isLoggedIn: boolean;
   profile: UserProfile | null;
+  profileStats: ProfileStats;
 }
 
 interface AuthActions {
   setProfile: (profile: UserProfile | null) => void;
+  patchProfile: (partial: Partial<UserProfile>) => void;
+  setProfileStats: (stats: ProfileStats) => void;
+  patchProfileStats: (partial: Partial<ProfileStats>) => void;
   handleLoginSuccess: (data: LoginResponse) => void;
   handleLogout: () => void;
 }
 
 type AuthStore = AuthState & AuthActions;
 
+const EMPTY_STATS: ProfileStats = {
+  publishCount: 0,
+  favoriteCount: 0,
+  browseCount: 0
+};
+
 export const useAuthStore = create<AuthStore>()(
   persist(
     (set) => ({
       isLoggedIn: !!getToken(),
       profile: null,
+      profileStats: EMPTY_STATS,
 
       setProfile: (profile) => set({ profile }),
+
+      patchProfile: (partial) =>
+        set((state) => ({
+          profile: state.profile ? { ...state.profile, ...partial } : state.profile
+        })),
+
+      setProfileStats: (profileStats) => set({ profileStats }),
+
+      patchProfileStats: (partial) =>
+        set((state) => ({
+          profileStats: { ...state.profileStats, ...partial }
+        })),
 
       handleLoginSuccess: (data) => {
         setToken(data.token);
@@ -43,21 +71,27 @@ export const useAuthStore = create<AuthStore>()(
             preferredDistrict: '',
             roommateExpectation: '',
             verified: false
-          }
+          },
+          profileStats: EMPTY_STATS
         });
       },
 
       handleLogout: () => {
         removeToken();
-        set({ isLoggedIn: false, profile: null });
+        set({
+          isLoggedIn: false,
+          profile: null,
+          profileStats: EMPTY_STATS
+        });
       }
     }),
     {
       name: 'auth-store',
       storage: createJSONStorage(() => taroStorage),
-      // 只持久化用户信息，isLoggedIn 通过 token 判断恢复
-      partialize: (state): Pick<AuthStore, 'profile'> => ({
-        profile: state.profile
+      // Persist profile data and stats; the token remains the login source of truth.
+      partialize: (state): Pick<AuthStore, 'profile' | 'profileStats'> => ({
+        profile: state.profile,
+        profileStats: state.profileStats
       })
     }
   )

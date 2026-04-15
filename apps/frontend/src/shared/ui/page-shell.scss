@@ -21,11 +21,19 @@
   height: 100%;
 }
 
+.page-shell__scroll--static {
+  overflow: hidden;
+}
+
 .page-shell__content {
   width: 100%;
   max-width: 720px;
   margin: 0 auto;
   padding: 18px 20px calc(168px + env(safe-area-inset-bottom));
+}
+
+.page-shell__content--static {
+  height: 100%;
 }
 
 .page-shell__hero {

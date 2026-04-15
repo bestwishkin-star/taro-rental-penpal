@@ -6,8 +6,14 @@ import iconFavorite from '@/assets/icons/profile/icon-favorite.png';
 import iconHistory from '@/assets/icons/profile/icon-history.png';
 import iconPublish from '@/assets/icons/profile/icon-publish.png';
 import iconSettings from '@/assets/icons/profile/icon-settings.png';
-import { login } from '@/shared/api/services';
-import { useAppStore } from '@/shared/store/app-store';
+import {
+  fetchFavorites,
+  fetchMyRentals,
+  fetchUserProfile,
+  getBrowseHistory,
+  login
+} from '@/shared/api/services';
+import { useAuthStore } from '@/shared/store';
 import { LoginModal } from '@/shared/ui/login-modal';
 import { PageShell } from '@/shared/ui/page-shell';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
@@ -19,51 +25,89 @@ import './index.scss';
 
 export default function ProfilePage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const { isLoggedIn, profile, handleLoginSuccess } = useAppStore();
+  const {
+    isLoggedIn,
+    profile,
+    profileStats,
+    handleLoginSuccess,
+    setProfile,
+    setProfileStats
+  } = useAuthStore();
 
   useDidShow(() => {
     setTabBarSelected(2);
+    if (!isLoggedIn) return;
+
+    void Promise.allSettled([
+      fetchUserProfile(),
+      fetchMyRentals(),
+      fetchFavorites(),
+      Promise.resolve(getBrowseHistory())
+    ]).then(([profileResult, mineResult, favoriteResult, historyResult]) => {
+      if (profileResult.status === 'fulfilled') {
+        setProfile(profileResult.value);
+      }
+
+      setProfileStats({
+        publishCount:
+          mineResult.status === 'fulfilled' ? mineResult.value.length : profileStats.publishCount,
+        favoriteCount:
+          favoriteResult.status === 'fulfilled'
+            ? favoriteResult.value.length
+            : profileStats.favoriteCount,
+        browseCount:
+          historyResult.status === 'fulfilled'
+            ? historyResult.value.length
+            : profileStats.browseCount
+      });
+    });
   });
 
   function handleHeaderClick() {
-    if (!isLoggedIn) setShowLoginModal(true);
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+    }
   }
 
   function handleLogin() {
     Taro.login({
       success: (res) => {
         if (!res.code) {
-          Taro.showToast({ title: '登录失败', icon: 'none', duration: 2000 });
+          void Taro.showToast({ title: '登录失败', icon: 'none', duration: 2000 });
           return;
         }
+
         login(res.code)
           .then((data) => {
             handleLoginSuccess(data);
             setShowLoginModal(false);
-            Taro.showToast({ title: '登录成功', icon: 'success', duration: 2000 });
+            void Taro.showToast({ title: '登录成功', icon: 'success', duration: 2000 });
           })
           .catch(() => {
-            Taro.showToast({ title: '登录失败，请重试', icon: 'none', duration: 2000 });
+            void Taro.showToast({ title: '登录失败，请重试', icon: 'none', duration: 2000 });
           });
       },
       fail: () => {
-        Taro.showToast({ title: '登录失败', icon: 'none', duration: 2000 });
+        void Taro.showToast({ title: '登录失败', icon: 'none', duration: 2000 });
       }
     });
   }
 
-  function handleMenuClick() {
-    if (!isLoggedIn) { setShowLoginModal(true); return; }
-    void Taro.showToast({ title: '功能开发中', icon: 'none', duration: 2000 });
-  }
-
   function navigateTo(type: 'mine' | 'favorites' | 'history') {
-    if (!isLoggedIn && type !== 'history') { setShowLoginModal(true); return; }
+    if (!isLoggedIn && type !== 'history') {
+      setShowLoginModal(true);
+      return;
+    }
+
     void Taro.navigateTo({ url: `/pages/rental-list/index?type=${type}` });
   }
 
   function navigateToSettings() {
-    if (!isLoggedIn) { setShowLoginModal(true); return; }
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+
     void Taro.navigateTo({ url: '/pages/settings/index' });
   }
 
@@ -72,6 +116,12 @@ export default function ProfilePage() {
       <ProfileHeader
         isLoggedIn={isLoggedIn}
         nickname={profile?.nickname}
+        avatarUrl={profile?.avatarUrl}
+        stats={[
+          { value: profileStats.publishCount, label: '我的发布' },
+          { value: profileStats.favoriteCount, label: '我的收藏' },
+          { value: profileStats.browseCount, label: '浏览历史' }
+        ]}
         onClick={handleHeaderClick}
       />
 
@@ -79,25 +129,25 @@ export default function ProfilePage() {
         <ProfileMenuItem
           icon={iconPublish}
           label="我的发布"
-          desc="查看我发布的房源"
+          desc="查看我发布的找室友和房源信息"
           onClick={() => navigateTo('mine')}
         />
         <ProfileMenuItem
           icon={iconFavorite}
           label="我的收藏"
-          desc="查看收藏的房源"
+          desc="查看我收藏的房源"
           onClick={() => navigateTo('favorites')}
         />
         <ProfileMenuItem
           icon={iconHistory}
           label="浏览历史"
-          desc="最近看过的房源"
+          desc="查看我最近浏览过的房源"
           onClick={() => navigateTo('history')}
         />
         <ProfileMenuItem
           icon={iconSettings}
           label="设置"
-          desc="账号与隐私设置"
+          desc="编辑头像、昵称和租房偏好"
           onClick={navigateToSettings}
         />
       </View>

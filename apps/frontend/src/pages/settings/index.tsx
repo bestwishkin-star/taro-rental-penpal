@@ -1,9 +1,7 @@
-import { useState } from 'react';
-
-import { Button, View } from '@tarojs/components';
-import Taro, { useLoad } from '@tarojs/taro';
-
-import type { UserProfileInput } from '@shared/contracts/user';
+import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
+import { Button, ScrollView, View } from '@tarojs/components';
+import Taro from '@tarojs/taro';
+import { useEffect, useState } from 'react';
 
 import { fetchUserProfile, saveUserProfile } from '@/shared/api/services';
 import { useAuthStore } from '@/shared/store';
@@ -23,29 +21,41 @@ const defaultForm: UserProfileInput = {
   roommateExpectation: ''
 };
 
+function toForm(profile: UserProfile | null): UserProfileInput {
+  if (!profile) return defaultForm;
+
+  return {
+    nickname: profile.nickname,
+    city: profile.city,
+    budget: profile.budget,
+    preferredDistrict: profile.preferredDistrict,
+    moveInDate: profile.moveInDate,
+    roommateExpectation: profile.roommateExpectation
+  };
+}
+
 export default function SettingsPage() {
-  const { setProfile, handleLogout } = useAuthStore();
-  const [avatarUrl, setAvatarUrl] = useState('');
-  const [form, setForm] = useState<UserProfileInput>(defaultForm);
+  const { profile, setProfile, handleLogout } = useAuthStore();
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || '');
+  const [form, setForm] = useState<UserProfileInput>(() => toForm(profile));
   const [saving, setSaving] = useState(false);
 
-  useLoad(() => {
+  useEffect(() => {
+    setAvatarUrl(profile?.avatarUrl || '');
+    setForm(toForm(profile));
+  }, [profile]);
+
+  useEffect(() => {
+    if (profile) return;
+
     fetchUserProfile()
-      .then((profile) => {
-        setAvatarUrl(profile.avatarUrl);
-        setForm({
-          nickname: profile.nickname,
-          city: profile.city,
-          budget: profile.budget,
-          preferredDistrict: profile.preferredDistrict,
-          moveInDate: profile.moveInDate,
-          roommateExpectation: profile.roommateExpectation
-        });
+      .then((nextProfile) => {
+        setProfile(nextProfile);
       })
       .catch(() => {
-        void Taro.showToast({ title: '加载失败', icon: 'none', duration: 2000 });
+        void Taro.showToast({ title: '资料加载失败', icon: 'none', duration: 2000 });
       });
-  });
+  }, [profile, setProfile]);
 
   function handleChange(key: keyof UserProfileInput, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -54,10 +64,12 @@ export default function SettingsPage() {
   async function handleSave() {
     if (saving) return;
     setSaving(true);
+
     try {
       const updated = await saveUserProfile({ ...form, avatarUrl });
       setProfile(updated);
       void Taro.showToast({ title: '保存成功', icon: 'success', duration: 2000 });
+      void Taro.navigateBack();
     } catch {
       void Taro.showToast({ title: '保存失败，请重试', icon: 'none', duration: 2000 });
     } finally {
@@ -71,10 +83,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <PageShell>
+    <PageShell scrollEnabled={false} contentClassName="settings-page-shell">
       <View className="settings-page">
-        <SettingsAvatar avatarUrl={avatarUrl} onChange={setAvatarUrl} />
-        <SettingsForm values={form} onChange={handleChange} />
+        <ScrollView scrollY showScrollbar={false} className="settings-page__body">
+          <View className="settings-page__body-inner">
+            <SettingsAvatar avatarUrl={avatarUrl} onChange={setAvatarUrl} />
+            <SettingsForm values={form} onChange={handleChange} />
+          </View>
+        </ScrollView>
 
         <View className="settings-page__actions">
           <Button

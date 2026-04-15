@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import {
   fetchFavoriteStatus,
   fetchRental,
+  getBrowseHistory,
   saveToBrowseHistory,
   toggleFavorite
 } from '@/shared/api/services';
@@ -32,7 +33,7 @@ export default function RentalDetailPage() {
   const [rental, setRental] = useState<RentalDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, profileStats, patchProfileStats } = useAuthStore();
 
   useEffect(() => {
     const params = Taro.getCurrentInstance().router?.params ?? {};
@@ -48,12 +49,17 @@ export default function RentalDetailPage() {
     Promise.all(tasks)
       .then(([data, favStatus]) => {
         setRental(data);
+        const historyBefore = getBrowseHistory().length;
         saveToBrowseHistory(data);
+        const historyAfter = getBrowseHistory().length;
+        if (historyAfter !== historyBefore) {
+          patchProfileStats({ browseCount: historyAfter });
+        }
         if (favStatus) setIsFavorited(favStatus.isFavorited);
       })
       .catch(() => void Taro.showToast({ title: '加载失败', icon: 'none' }))
       .finally(() => setLoading(false));
-  }, [isLoggedIn]);
+  }, [isLoggedIn, patchProfileStats]);
 
   function handleCopyWechat() {
     if (!rental?.wechat) return;
@@ -71,6 +77,12 @@ export default function RentalDetailPage() {
     toggleFavorite(rental.id)
       .then((status) => {
         setIsFavorited(status.isFavorited);
+        patchProfileStats({
+          favoriteCount: Math.max(
+            0,
+            profileStats.favoriteCount + (status.isFavorited ? 1 : -1)
+          )
+        });
         void Taro.showToast({
           title: status.isFavorited ? '已收藏' : '已取消收藏',
           icon: 'none'

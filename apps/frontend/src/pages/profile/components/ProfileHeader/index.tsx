@@ -1,4 +1,4 @@
-import { Text, View } from '@tarojs/components';
+import { Image, Text, View } from '@tarojs/components';
 
 import './index.scss';
 
@@ -9,28 +9,27 @@ interface StatItem {
 
 interface Props {
   nickname?: string;
+  avatarUrl?: string;
   isLoggedIn: boolean;
-  stats?: StatItem[];
+  stats: StatItem[];
   onClick?: () => void;
 }
 
-const DEFAULT_STATS: StatItem[] = [
-  { value: 0, label: '发布' },
-  { value: 0, label: '收藏' },
-  { value: 0, label: '浏览' }
-];
-
-export function ProfileHeader({ nickname, isLoggedIn, stats = DEFAULT_STATS, onClick }: Props) {
+export function ProfileHeader({ nickname, avatarUrl, isLoggedIn, stats, onClick }: Props) {
   return (
     <View className="profile-header" hoverClass="profile-header--active" onClick={onClick}>
       <View className="profile-header__top">
-        <View className="profile-header__avatar" />
+        {avatarUrl ? (
+          <Image src={avatarUrl} className="profile-header__avatar" mode="aspectFill" />
+        ) : (
+          <View className="profile-header__avatar" />
+        )}
         <View className="profile-header__info">
           <Text className="profile-header__name">
-            {isLoggedIn ? (nickname ?? '租房用户') : '未登录'}
+            {isLoggedIn ? (nickname || '未设置昵称') : '立即登录'}
           </Text>
           <Text className="profile-header__desc">
-            {isLoggedIn ? '完善个人信息，提升信任度' : '点击登录查看更多功能'}
+            {isLoggedIn ? '编辑资料，完善你的租房偏好' : '登录后查看我的发布、收藏和浏览历史'}
           </Text>
         </View>
       </View>

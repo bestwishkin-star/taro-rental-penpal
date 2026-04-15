@@ -17,7 +17,8 @@ export default tseslint.config(
       '**/dist/**',
       '**/node_modules/**',
       '**/.turbo/**',
-      '**/coverage/**'
+      '**/coverage/**',
+      'apps/frontend/vitest.config.ts'
     ]
   },
   js.configs.recommended,
