@@ -1,9 +1,9 @@
 import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
 
-
 import { verifyToken } from '@/lib/jwt';
 import { fail, handleError, ok } from '@/lib/response';
+import { buildRentalLocationLabel } from '@/modules/rentals/location-utils';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
 
 export async function GET(request: Request) {
@@ -15,7 +15,10 @@ export async function GET(request: Request) {
       sort: searchParams.get('sort') ?? undefined,
       page: searchParams.get('page') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
-      priceRange: (searchParams.get('priceRange') as ListRentalsQuery['priceRange']) ?? undefined
+      priceRange: (searchParams.get('priceRange') as ListRentalsQuery['priceRange']) ?? undefined,
+      province: searchParams.get('province') ?? undefined,
+      city: searchParams.get('city') ?? undefined,
+      district: searchParams.get('district') ?? undefined
     };
     const rentals = await readRentals(query);
     return ok(rentals);
@@ -34,13 +37,35 @@ export async function POST(request: Request) {
     if (!payload) return fail(BizCode.UNAUTHORIZED);
 
     const body = (await request.json()) as CreateRentalInput;
+    const hasAnyStructuredLocationField =
+      Boolean(body.province || body.city || body.district || body.address) ||
+      body.latitude !== undefined ||
+      body.longitude !== undefined;
+    const hasCompleteRegion = Boolean(body.province && body.city && body.district);
 
     if (!body.price) return fail(BizCode.INVALID_PARAMS, '请填写月租价格');
-    if (!body.location) return fail(BizCode.INVALID_PARAMS, '请填写所在位置');
     if (!body.roomType) return fail(BizCode.INVALID_PARAMS, '请选择租住类型');
     if (!body.experience) return fail(BizCode.INVALID_PARAMS, '请填写居住感受');
+    if (hasAnyStructuredLocationField && !hasCompleteRegion) {
+      return fail(BizCode.INVALID_PARAMS, '请先选择省市区');
+    }
 
-    const result = await publishRental(payload.openid, body);
+    const location =
+      body.location?.trim() ||
+      (hasCompleteRegion
+        ? buildRentalLocationLabel({
+            province: body.province,
+            city: body.city,
+            district: body.district,
+            address: body.address
+          })
+        : '');
+    if (!location) return fail(BizCode.INVALID_PARAMS, '请填写所在位置');
+
+    const result = await publishRental(payload.openid, {
+      ...body,
+      location
+    });
     return ok(result);
   } catch (error) {
     return handleError(error);
