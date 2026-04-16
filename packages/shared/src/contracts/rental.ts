@@ -4,6 +4,12 @@ export interface RentalListing {
   id: string;
   title: string;
   location: string;
+  province?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
   price: string;
   area: string;
   roomType: string;
@@ -19,6 +25,9 @@ export interface ListRentalsQuery {
   page?: string;
   pageSize?: string;
   priceRange?: 'lt2000' | '2000to4000' | 'gt4000';
+  province?: string;
+  city?: string;
+  district?: string;
 }
 
 export interface RentalDetail extends RentalListing {
@@ -35,6 +44,12 @@ export interface CreateRentalInput {
   tags: string[];
   wechat?: string;
   photos: string[];
+  province?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface CreateRentalResponse {

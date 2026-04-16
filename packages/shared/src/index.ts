@@ -3,6 +3,7 @@ export * from './errors';
 export * from './contracts/auth';
 export * from './contracts/chat';
 export * from './constants/platform';
+export * from './contracts/location';
 export * from './contracts/health';
 export * from './contracts/overview';
 export * from './contracts/rental';
