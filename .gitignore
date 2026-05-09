@@ -1,4 +1,4 @@
-node_modules
+﻿node_modules
 dist
 .next
 .taro
@@ -7,22 +7,24 @@ coverage
 *.log
 *.tsbuildinfo
 
-# 环境变量
+# 鐜鍙橀噺
 .env
 .env.local
 
-# MCP 配置
+# MCP 閰嶇疆
 .mcp
 .mcp.json
 
-# Claude Code 本地配置
+# Claude Code 鏈湴閰嶇疆
 .claude/settings.json
 .claude/settings.local.json
+.superpowers/
 
-# 构建产物
+# 鏋勫缓浜х墿
 apps/frontend/dist
 apps/frontend/.swc
 apps/backend/.next
 
 # Git worktrees
 .worktrees/
+
