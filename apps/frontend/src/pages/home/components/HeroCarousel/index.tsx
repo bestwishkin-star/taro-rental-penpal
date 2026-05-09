@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import './index.scss';
 
+// 首页轮播数据：每一项包含标题、副标题和远程背景图。
 const SLIDES = [
   {
     title: '寻一处心安之所',
@@ -21,11 +22,13 @@ const SLIDES = [
   }
 ];
 
+/** 首页头图轮播：自动播放并用自定义圆点展示当前页。 */
 export function HeroCarousel() {
   const [current, setCurrent] = useState(0);
 
   return (
     <View className="hero-carousel">
+      {/* 图片轮播主体：承载背景图、遮罩和文案。 */}
       <Swiper
         className="hero-carousel__swiper"
         indicatorDots={false}
@@ -52,6 +55,7 @@ export function HeroCarousel() {
           </SwiperItem>
         ))}
       </Swiper>
+      {/* 自定义指示器：跟随 Swiper current 状态切换。 */}
       <View className="hero-carousel__dots">
         {SLIDES.map((_, index) => (
           <View

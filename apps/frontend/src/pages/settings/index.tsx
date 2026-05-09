@@ -12,6 +12,7 @@ import { SettingsForm } from './components/SettingsForm';
 
 import './index.scss';
 
+// 设置页默认表单，保证未加载资料时也有完整字段结构。
 const defaultForm: UserProfileInput = {
   nickname: '',
   city: '',
@@ -21,6 +22,7 @@ const defaultForm: UserProfileInput = {
   roommateExpectation: ''
 };
 
+/** 将后端用户资料转换成表单可编辑的数据结构。 */
 function toForm(profile: UserProfile | null): UserProfileInput {
   if (!profile) return defaultForm;
 
@@ -34,6 +36,7 @@ function toForm(profile: UserProfile | null): UserProfileInput {
   };
 }
 
+/** 设置页：编辑头像、昵称和租房偏好，并提供退出登录。 */
 export default function SettingsPage() {
   const { profile, setProfile, handleLogout } = useAuthStore();
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || '');
@@ -41,11 +44,13 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    // store 中资料变化后，同步回本页表单。
     setAvatarUrl(profile?.avatarUrl || '');
     setForm(toForm(profile));
   }, [profile]);
 
   useEffect(() => {
+    // 直接进入设置页且本地无资料时，主动拉取一次用户资料。
     if (profile) return;
 
     fetchUserProfile()
@@ -57,10 +62,12 @@ export default function SettingsPage() {
       });
   }, [profile, setProfile]);
 
+  /** 更新指定表单字段，保持表单对象不可变。 */
   function handleChange(key: keyof UserProfileInput, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  /** 保存用户资料，成功后更新全局 profile 并返回上一页。 */
   async function handleSave() {
     if (saving) return;
     setSaving(true);
@@ -77,6 +84,7 @@ export default function SettingsPage() {
     }
   }
 
+  /** 退出登录并回到个人中心。 */
   function handleLogoutClick() {
     handleLogout();
     void Taro.navigateBack();
@@ -85,6 +93,7 @@ export default function SettingsPage() {
   return (
     <PageShell scrollEnabled={false} contentClassName="settings-page-shell">
       <View className="settings-page">
+        {/* 表单主体：头像选择与基础资料字段。 */}
         <ScrollView scrollY showScrollbar={false} className="settings-page__body">
           <View className="settings-page__body-inner">
             <SettingsAvatar avatarUrl={avatarUrl} onChange={setAvatarUrl} />
@@ -92,6 +101,7 @@ export default function SettingsPage() {
           </View>
         </ScrollView>
 
+        {/* 底部操作区：保存资料或退出登录。 */}
         <View className="settings-page__actions">
           <Button
             className={`settings-page__save${saving ? ' settings-page__save--loading' : ''}`}

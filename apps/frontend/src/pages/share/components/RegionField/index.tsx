@@ -13,11 +13,13 @@ interface Props {
 
 /** 发布页必填的省市区选择器。 */
 export function RegionField({ value, onChange }: Props) {
+  /** 将 Picker 返回的索引数组转换为发布表单使用的省市区结构。 */
   function handleChange(event: { detail: { value: number[] } }) {
     onChange(getRegionByIndexes(event.detail.value));
   }
 
   return (
+    // 省市区选择器：发布页基础位置字段。
     <Picker mode="multiSelector" range={REGION_COLUMNS} value={findRegionIndexes(value)} onChange={handleChange}>
       <View className="region-field">
         <Text className={`region-field__value${value ? '' : ' region-field__value--placeholder'}`}>

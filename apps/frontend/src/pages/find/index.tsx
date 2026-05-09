@@ -19,8 +19,10 @@ import type { SortValue } from './components/SortBar';
 
 import './index.scss';
 
+// 列表分页大小：同时用于请求 pageSize 和判断是否还有下一页。
 const PAGE_SIZE = 10;
 
+/** 找房页：聚合搜索、筛选、地区、排序和分页加载逻辑。 */
 export default function FindPage() {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
@@ -37,14 +39,17 @@ export default function FindPage() {
   const requestingRef = useRef(false);
 
   useDidShow(() => {
+    // 每次显示找房页时同步底部 TabBar 选中态。
     setTabBarSelected(1);
   });
 
   useEffect(() => {
+    // 搜索词防抖，减少用户输入过程中的重复请求。
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 500);
     return () => clearTimeout(timer);
   }, [keyword]);
 
+  /** 按当前筛选条件加载指定页；append=true 时追加到现有列表。 */
   const loadPage = useCallback(
     async (pageNum: number, append: boolean) => {
       if (requestingRef.current) return;
@@ -81,21 +86,25 @@ export default function FindPage() {
   );
 
   useEffect(() => {
+    // 任一筛选条件变化后回到第一页重新拉取。
     setPage(1);
     setHasMore(true);
     void loadPage(1, false);
   }, [loadPage]);
 
+  /** 下拉刷新：保持当前筛选条件并重新加载第一页。 */
   function handleRefresh() {
     setRefreshing(true);
     void loadPage(1, false);
   }
 
+  /** 滚动到底部：在未加载完时请求下一页。 */
   function handleScrollToLower() {
     if (!hasMore || loadingMore || loading) return;
     void loadPage(page + 1, true);
   }
 
+  /** 清空所有筛选条件，回到默认列表状态。 */
   function handleReset() {
     setKeyword('');
     setFilter('all');
@@ -111,6 +120,7 @@ export default function FindPage() {
       onRefresherRefresh={handleRefresh}
       onScrollToLower={handleScrollToLower}
     >
+      {/* 搜索与筛选区：关键词、房型价格、地区三级联动。 */}
       <View className="find-controls">
         <View className="find-controls__search">
           <SearchBar value={keyword} onChange={setKeyword} />
@@ -124,10 +134,12 @@ export default function FindPage() {
         <RegionFilter value={region} onChange={setRegion} />
       </View>
 
+      {/* 排序区：控制默认、价格、时间等列表排序方式。 */}
       <View className="find-sort">
         <SortBar active={sort} onChange={setSort} />
       </View>
 
+      {/* 房源列表区：包含加载态、空态、卡片列表和分页尾部。 */}
       <View className="find-list">
         {loading && (
           <View className="find-empty">

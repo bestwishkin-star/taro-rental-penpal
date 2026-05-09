@@ -16,10 +16,12 @@ interface Props {
   onChange: (photos: string[]) => void;
 }
 
+/** 图片上传组件：选择本地图片、上传后回填远端地址列表。 */
 export function PhotoUploader({ photos, max = 9, onChange }: Props) {
   const isLoggedIn = useAuthStore((s) => s.isLoggedIn);
   const [uploading, setUploading] = useState(false);
 
+  /** 新增图片：校验登录、授权隐私并按剩余数量选择媒体。 */
   function handleAdd() {
     if (!isLoggedIn) {
       void Taro.showToast({ title: '请先登录后再上传图片', icon: 'none' });
@@ -53,12 +55,14 @@ export function PhotoUploader({ photos, max = 9, onChange }: Props) {
     });
   }
 
+  /** 移除指定下标的图片并通知父组件。 */
   function handleRemove(index: number) {
     onChange(photos.filter((_, i) => i !== index));
   }
 
   return (
     <View className="photo-uploader">
+      {/* 已上传图片列表：每张图都提供删除按钮。 */}
       {photos.map((uri, i) => (
         <View key={i} className="photo-uploader__item">
           <View className="photo-uploader__img" style={{ backgroundImage: `url(${uri})` }} />
@@ -67,6 +71,7 @@ export function PhotoUploader({ photos, max = 9, onChange }: Props) {
           </View>
         </View>
       ))}
+      {/* 添加按钮：上传中切换为加载态，达到上限后隐藏。 */}
       {photos.length < max && (
         <View className={`photo-uploader__add${uploading ? ' photo-uploader__add--loading' : ''}`} onClick={uploading ? undefined : handleAdd}>
           {uploading ? (

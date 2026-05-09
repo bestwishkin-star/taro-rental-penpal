@@ -6,12 +6,14 @@ import './index.scss';
 
 export type SortValue = 'default' | 'price_asc' | 'price_desc' | 'newest' | 'distance';
 
+// 排序项模型：altValue 用于同一按钮在升序和降序之间切换。
 interface SortOption {
   label: string;
   value: SortValue;
   altValue?: SortValue;
 }
 
+// 找房列表排序项，顺序即页面展示顺序。
 const OPTIONS: SortOption[] = [
   { label: '综合排序', value: 'default' },
   { label: '租金', value: 'price_asc', altValue: 'price_desc' },
@@ -24,7 +26,9 @@ interface Props {
   onChange: (v: SortValue) => void;
 }
 
+/** 找房排序栏：处理排序项选中和价格升降序切换。 */
 export function SortBar({ active, onChange }: Props) {
+  /** 点击排序项时，在主值和备用值之间切换。 */
   function handleTap(option: SortOption) {
     if (active === option.value) {
       onChange(option.altValue ?? option.value);
@@ -37,6 +41,7 @@ export function SortBar({ active, onChange }: Props) {
 
   return (
     <View className="sort-bar">
+      {/* 排序按钮组：按 OPTIONS 顺序渲染并在激活时高亮。 */}
       {OPTIONS.map((option, index) => {
         const isActive = active === option.value || active === option.altValue;
         return (

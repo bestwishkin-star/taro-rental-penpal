@@ -10,9 +10,11 @@ interface Props {
   onChange: (v: string) => void;
 }
 
+/** 找房搜索栏：输入关键词并保留筛选入口图标。 */
 export function SearchBar({ value, onChange }: Props) {
   return (
     <View className="search-bar">
+      {/* 搜索输入区：变更后由页面层做防抖请求。 */}
       <View className="search-bar__input-wrap">
         <Image src={iconSearch} className="search-bar__icon" mode="aspectFit" />
         <Input
@@ -24,6 +26,7 @@ export function SearchBar({ value, onChange }: Props) {
           confirmType="search"
         />
       </View>
+      {/* 视觉筛选按钮：实际筛选控件在下方 FilterChips 和 RegionFilter。 */}
       <View className="search-bar__filter-btn">
         <Image src={iconFilterBtn} className="search-bar__filter-icon" mode="aspectFit" />
       </View>

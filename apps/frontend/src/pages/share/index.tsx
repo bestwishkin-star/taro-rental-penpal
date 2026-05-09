@@ -25,9 +25,12 @@ import { TagSelector } from './components/TagSelector';
 
 import './index.scss';
 
+// 发布表单的快捷标签，提交时原样写入房源 tags。
+
 const QUICK_TAGS = ['近地铁', '可短租', '民用水电', '采光好', '独立卫浴', '可养宠物'];
 const ROOM_TYPES = ['整租', '合租'];
 
+/** 发布房源页：收集图片、位置、基础信息、描述和联系方式。 */
 export default function SharePage() {
   const { profileStats, patchProfileStats } = useAuthStore();
   const [photos, setPhotos] = useState<string[]>([]);
@@ -42,6 +45,7 @@ export default function SharePage() {
   const [wechat, setWechat] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  /** 更新省市区时，如果行政区变化则清空已选的精确地图地址。 */
   function handleRegionChange(nextRegion: RentalRegionInput) {
     setRegion((previousRegion) => {
       if (shouldClearPreciseLocation(nextRegion, previousRegion)) {
@@ -52,6 +56,7 @@ export default function SharePage() {
     });
   }
 
+  /** 调用微信地图选点，回填详细地址和经纬度。 */
   async function handleChooseLocation() {
     try {
       const selected = await chooseWechatLocation();
@@ -62,11 +67,13 @@ export default function SharePage() {
     }
   }
 
+  /** 清空精确地址，同时移除经纬度，避免提交过期坐标。 */
   function handleClearAddress() {
     setAddress('');
     setCoordinate(null);
   }
 
+  /** 校验必填项并提交房源；成功后同步个人中心发布数量。 */
   async function handleSubmit() {
     if (!price) {
       void Taro.showToast({ title: '请填写租金', icon: 'none' });
@@ -120,6 +127,7 @@ export default function SharePage() {
   return (
     <PageShell>
       <ScrollView scrollY showScrollbar={false} className="share-scroll">
+        {/* 图片上传区：承载房源照片选择和预览。 */}
         <FormSection title="房源照片" subtitle="建议上传真实清晰的房间、客厅或周边照片">
           <PhotoUploader photos={photos} onChange={setPhotos} />
         </FormSection>
@@ -141,6 +149,7 @@ export default function SharePage() {
             <FormRow icon={iconLocation} label="位置">
               <RegionField value={region} onChange={handleRegionChange} />
             </FormRow>
+            {/* 地图精确地址操作：选择或清空微信地图返回的地址。 */}
             <AddressActions address={address} onChooseLocation={handleChooseLocation} onClear={handleClearAddress} />
             <FormRowDivider />
             <Picker
@@ -180,6 +189,7 @@ export default function SharePage() {
             maxlength={500}
             showConfirmBar={false}
           />
+          {/* 快捷标签：补充房源亮点并同步 selectedTags。 */}
           <TagSelector
             tags={QUICK_TAGS}
             selected={selectedTags}
@@ -209,6 +219,7 @@ export default function SharePage() {
         </FormSection>
       </ScrollView>
 
+      {/* 固定提交栏：显示提交加载态并触发表单提交。 */}
       <SubmitBar loading={submitting} onSubmit={handleSubmit} />
     </PageShell>
   );

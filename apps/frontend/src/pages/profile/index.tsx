@@ -23,6 +23,7 @@ import { ProfileMenuItem } from './components/ProfileMenuItem';
 
 import './index.scss';
 
+/** 个人中心页：维护登录态入口、用户数据和个人房源相关快捷入口。 */
 export default function ProfilePage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const {
@@ -35,6 +36,7 @@ export default function ProfilePage() {
   } = useAuthStore();
 
   useDidShow(() => {
+    // 个人中心每次展示时刷新用户资料、发布数、收藏数和浏览记录数量。
     setTabBarSelected(2);
     if (!isLoggedIn) return;
 
@@ -63,12 +65,14 @@ export default function ProfilePage() {
     });
   });
 
+  /** 未登录时点击头像区域，打开登录弹窗。 */
   function handleHeaderClick() {
     if (!isLoggedIn) {
       setShowLoginModal(true);
     }
   }
 
+  /** 调用小程序登录并用 code 换取后端登录态。 */
   function handleLogin() {
     Taro.login({
       success: (res) => {
@@ -93,6 +97,7 @@ export default function ProfilePage() {
     });
   }
 
+  /** 跳转到指定房源列表，未登录用户只能查看本地浏览历史。 */
   function navigateTo(type: 'mine' | 'favorites' | 'history') {
     if (!isLoggedIn && type !== 'history') {
       setShowLoginModal(true);
@@ -102,6 +107,7 @@ export default function ProfilePage() {
     void Taro.navigateTo({ url: `/pages/rental-list/index?type=${type}` });
   }
 
+  /** 跳转个人设置页；未登录时先要求登录。 */
   function navigateToSettings() {
     if (!isLoggedIn) {
       setShowLoginModal(true);
@@ -113,6 +119,7 @@ export default function ProfilePage() {
 
   return (
     <PageShell>
+      {/* 用户信息头部：头像、昵称和发布/收藏/浏览统计。 */}
       <ProfileHeader
         isLoggedIn={isLoggedIn}
         nickname={profile?.nickname}
@@ -125,6 +132,7 @@ export default function ProfilePage() {
         onClick={handleHeaderClick}
       />
 
+      {/* 功能菜单区：我的发布、收藏、浏览历史和设置入口。 */}
       <View className="profile-menu">
         <ProfileMenuItem
           icon={iconPublish}
@@ -152,6 +160,7 @@ export default function ProfilePage() {
         />
       </View>
 
+      {/* 登录弹窗：统一承载微信登录触发入口。 */}
       <LoginModal
         visible={showLoginModal}
         onClose={() => setShowLoginModal(false)}

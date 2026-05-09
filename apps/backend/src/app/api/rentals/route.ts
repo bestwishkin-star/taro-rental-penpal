@@ -6,6 +6,7 @@ import { fail, handleError, ok } from '@/lib/response';
 import { buildRentalLocationLabel } from '@/modules/rentals/location-utils';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
 
+/** 房源列表接口：从 URL 查询参数组装筛选条件。 */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -27,6 +28,7 @@ export async function GET(request: Request) {
   }
 }
 
+/** 房源发布接口：校验登录态和必填字段后创建房源。 */
 export async function POST(request: Request) {
   try {
     const auth = request.headers.get('authorization') ?? '';

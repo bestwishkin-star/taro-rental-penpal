@@ -15,6 +15,7 @@ import { useAuthStore } from '@/shared/store';
 
 import './index.scss';
 
+/** 将后端返回的相对上传地址转换成当前 API 域名下的可访问图片地址。 */
 function normalizePhotoUrl(url: string): string {
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   if (url.startsWith('/')) return `${serverBase}${url}`;
@@ -23,12 +24,14 @@ function normalizePhotoUrl(url: string): string {
   return url;
 }
 
+/** 根据标签内容选择卡片标签色，突出通勤、采光等常见卖点。 */
 function getTagStyle(tag: string): 'accent' | 'green' | 'neutral' {
   if (tag.includes('地铁') || tag.includes('交通')) return 'accent';
   if (tag.includes('押') || tag.includes('朝南') || tag.includes('采光')) return 'green';
   return 'neutral';
 }
 
+/** 房源详情页：加载详情、收藏状态、浏览历史并展示联系入口。 */
 export default function RentalDetailPage() {
   const [rental, setRental] = useState<RentalDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +39,7 @@ export default function RentalDetailPage() {
   const { isLoggedIn, profileStats, patchProfileStats } = useAuthStore();
 
   useEffect(() => {
+    // 详情页依赖路由 id，同时并发加载房源详情和登录用户收藏状态。
     const params = Taro.getCurrentInstance().router?.params ?? {};
     const id = params.id;
     if (!id) {
@@ -61,6 +65,7 @@ export default function RentalDetailPage() {
       .finally(() => setLoading(false));
   }, [isLoggedIn, patchProfileStats]);
 
+  /** 复制房源微信号，供用户跳转微信联系房东。 */
   function handleCopyWechat() {
     if (!rental?.wechat) return;
     void Taro.setClipboardData({ data: rental.wechat }).then(() => {
@@ -68,6 +73,7 @@ export default function RentalDetailPage() {
     });
   }
 
+  /** 登录后切换收藏状态，并同步个人中心收藏计数。 */
   function handleToggleFavorite() {
     if (!isLoggedIn) {
       void Taro.showToast({ title: '请先登录', icon: 'none' });
@@ -107,6 +113,7 @@ export default function RentalDetailPage() {
     );
   }
 
+  // 渲染前统一整理图片和位置面积信息，避免 JSX 中重复拼装。
   const photos = rental.photos.map(normalizePhotoUrl);
   const metaParts = [rental.location];
   if (rental.area) metaParts.push(`${rental.area}㎡`);
@@ -114,6 +121,7 @@ export default function RentalDetailPage() {
   return (
     <View className="detail-page">
       <ScrollView scrollY showScrollbar={false} className="detail-scroll">
+        {/* 顶部图片区：展示房源图片轮播或默认占位。 */}
         {/* 图片轮播 */}
         <View className="detail-gallery">
           {photos.length > 0 ? (
@@ -136,6 +144,7 @@ export default function RentalDetailPage() {
         </View>
 
         <View className="detail-content">
+          {/* 核心摘要区、基础信息区、描述区和联系方式区。 */}
           {/* 价格 & 标题卡 */}
           <View className="detail-card">
             <View className="detail-price-row">
@@ -208,6 +217,7 @@ export default function RentalDetailPage() {
       </ScrollView>
 
       {/* 底部操作栏 */}
+      {/* 底部操作栏：收藏和复制联系方式的主要入口。 */}
       <View className="detail-bottom">
         <View className="detail-fav-btn" onClick={handleToggleFavorite}>
           <Text className="detail-fav-btn__text">{isFavorited ? '已收藏' : '收藏'}</Text>

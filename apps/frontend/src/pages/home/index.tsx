@@ -12,15 +12,19 @@ import { HeroCarousel } from './components/HeroCarousel';
 
 import './index.scss';
 
+/** 首页：承载轮播入口、找房/发布快捷入口和底部提示信息。 */
 export default function HomePage() {
   useDidShow(() => {
+    // 每次回到首页时同步自定义 TabBar 的选中态。
     setTabBarSelected(0);
   });
 
   return (
     <PageShell>
+      {/* 顶部轮播：展示主要租房场景和产品引导。 */}
       <HeroCarousel />
 
+      {/* 核心操作区：进入找房列表或发布房源表单。 */}
       <View className="home-actions">
         <ActionCard
           icon={iconFind}
@@ -36,6 +40,7 @@ export default function HomePage() {
         />
       </View>
 
+      {/* 底部提示区：说明平台安全和沟通建议。 */}
       <View className="home-tips">
         <Text className="home-tips__title">温馨提示</Text>
         <Text className="home-tips__text">真实信息，安全交流，共建友好社区</Text>

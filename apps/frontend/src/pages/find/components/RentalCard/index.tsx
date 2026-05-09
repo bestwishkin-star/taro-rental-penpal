@@ -12,6 +12,7 @@ interface Props {
   onClick?: () => void;
 }
 
+/** 根据房源标签内容选择视觉强调色。 */
 function getTagStyle(tag: string): 'accent' | 'green' | 'neutral' {
   if (tag.includes('地铁') || tag.includes('交通')) return 'accent';
   if (tag.includes('押') || tag.includes('朝南') || tag.includes('采光')) return 'green';
@@ -19,6 +20,7 @@ function getTagStyle(tag: string): 'accent' | 'green' | 'neutral' {
 }
 
 /** 将存储的图片绝对 URL 替换为当前 serverBase，兼容 IP 变更 */
+/** 统一处理上传图片地址，兼容相对路径和包含 uploads 的完整路径。 */
 function normalizePhotoUrl(url: string): string {
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   if (url.startsWith('/')) return `${serverBase}${url}`;
@@ -27,8 +29,10 @@ function normalizePhotoUrl(url: string): string {
   return url;
 }
 
+/** 房源卡片：展示封面、标题、标签、位置面积和月租价格。 */
 export function RentalCard({ item, onClick }: Props) {
   const [imgError, setImgError] = useState(false);
+  // 卡片空间有限，仅展示前两个标签。
   const displayTags = item.tags.slice(0, 2);
   const rawPhoto = item.photos[0];
   const coverPhoto = rawPhoto ? normalizePhotoUrl(rawPhoto) : undefined;
@@ -37,6 +41,7 @@ export function RentalCard({ item, onClick }: Props) {
 
   return (
     <View className="rental-card" onClick={onClick}>
+      {/* 封面区：图片加载失败时回退到占位图块。 */}
       {coverPhoto && !imgError ? (
         <Image
           src={coverPhoto}
@@ -47,6 +52,7 @@ export function RentalCard({ item, onClick }: Props) {
       ) : (
         <View className="rental-card__image rental-card__image--placeholder" />
       )}
+      {/* 信息区：标题、标签、位置和价格。 */}
       <View className="rental-card__content">
         <Text className="rental-card__title" numberOfLines={2}>
           {item.title}

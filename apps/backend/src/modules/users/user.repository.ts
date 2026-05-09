@@ -4,6 +4,7 @@ import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 
 import { pool } from '@/lib/mysql';
 
+/** users 表资料字段，包含个人资料和租房偏好。 */
 interface UserRow extends RowDataPacket {
   openid: string;
   nickname: string;
@@ -16,6 +17,7 @@ interface UserRow extends RowDataPacket {
   verified: number;
 }
 
+/** 将 users 表行数据映射为前端用户资料契约。 */
 function rowToProfile(row: UserRow): UserProfile {
   return {
     id: row.openid,
@@ -30,6 +32,7 @@ function rowToProfile(row: UserRow): UserProfile {
   };
 }
 
+/** 构造兜底用户资料，避免前端拿到缺失字段。 */
 const emptyProfile = (openid: string): UserProfile => ({
   id: openid,
   avatarUrl: '',
@@ -42,6 +45,7 @@ const emptyProfile = (openid: string): UserProfile => ({
   verified: false
 });
 
+/** 查询用户资料，用户不存在时返回空资料结构。 */
 export async function getUserProfile(openid: string): Promise<UserProfile> {
   const [rows] = await pool.execute<UserRow[]>(
     'SELECT * FROM users WHERE openid = ? LIMIT 1',
@@ -50,6 +54,7 @@ export async function getUserProfile(openid: string): Promise<UserProfile> {
   return rows[0] ? rowToProfile(rows[0]) : emptyProfile(openid);
 }
 
+/** 新增或更新用户资料，并返回保存后的资料模型。 */
 export async function saveUserProfile(
   openid: string,
   input: UserProfileInput

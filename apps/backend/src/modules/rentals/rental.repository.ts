@@ -20,6 +20,7 @@ import {
   type RentalLocationSchema
 } from './location-utils';
 
+/** rentals 表基础行结构，覆盖列表和详情都会用到的字段。 */
 interface RentalRow extends RowDataPacket {
   id: string;
   price: string;
@@ -37,11 +38,13 @@ interface RentalRow extends RowDataPacket {
   status: number;
 }
 
+/** 房源详情额外包含描述和联系方式字段。 */
 interface RentalDetailRow extends RentalRow {
   experience: string;
   wechat: string;
 }
 
+/** 安全解析数据库中的 JSON 数组字段，异常时回退为空数组。 */
 function safeParseArray(value: string | null): string[] {
   if (!value) return [];
   try {
@@ -52,16 +55,19 @@ function safeParseArray(value: string | null): string[] {
   }
 }
 
+/** 将数据库 status 数值映射为前端契约中的房源状态。 */
 function mapStatus(status: number): RentalStatus {
   return status === 1 ? 'active' : 'inactive';
 }
 
+/** 将数据库中的经纬度值转换为 number，空值或非法值返回 undefined。 */
 function toNumber(value: number | string | null): number | undefined {
   if (value == null || value === '') return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** 将 rentals 表行数据转换为前端列表卡片使用的房源模型。 */
 function mapRentalRow(row: RentalRow): RentalListing {
   return {
     id: row.id,
@@ -82,6 +88,7 @@ function mapRentalRow(row: RentalRow): RentalListing {
   };
 }
 
+/** 根据当前数据库结构动态拼接查询列，兼容旧表结构。 */
 function getSelectColumns(schema: RentalLocationSchema) {
   const columns = ['id', 'price', 'location'];
 
@@ -102,6 +109,7 @@ function getSelectColumns(schema: RentalLocationSchema) {
   return columns;
 }
 
+/** 根据数据库位置字段能力构造发布房源的 INSERT 语句。 */
 function buildInsertStatement(id: string, userOpenid: string, input: CreateRentalInput, schema: RentalLocationSchema) {
   const columns = ['id', 'user_openid', 'price', 'location'];
   const values: (string | number | null)[] = [
@@ -158,10 +166,12 @@ function buildInsertStatement(id: string, userOpenid: string, input: CreateRenta
   };
 }
 
+/** 读取并缓存 rentals 表位置相关字段能力。 */
 async function readSchema() {
   return detectRentalLocationSchema();
 }
 
+/** 查询单个已上架房源详情。 */
 export async function getRentalById(id: string): Promise<RentalDetail | null> {
   const schema = await readSchema();
   const columns = getSelectColumns(schema).join(', ');
@@ -178,6 +188,7 @@ export async function getRentalById(id: string): Promise<RentalDetail | null> {
   };
 }
 
+/** 创建房源记录并返回生成的房源 id。 */
 export async function createRental(userOpenid: string, input: CreateRentalInput): Promise<{ id: string }> {
   const schema = await readSchema();
   const id = generateId();
@@ -186,6 +197,7 @@ export async function createRental(userOpenid: string, input: CreateRentalInput)
   return { id };
 }
 
+/** 按关键词、筛选、价格、地区和分页条件查询公开房源。 */
 export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalListing[]> {
   const schema = await readSchema();
   const columns = getSelectColumns(schema).join(', ');
@@ -235,6 +247,7 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
   return rows.map(mapRentalRow);
 }
 
+/** 查询指定用户发布的所有房源。 */
 export async function listMyRentals(userOpenid: string): Promise<RentalListing[]> {
   const schema = await readSchema();
   const columns = getSelectColumns(schema).join(', ');
@@ -245,6 +258,7 @@ export async function listMyRentals(userOpenid: string): Promise<RentalListing[]
   return rows.map(mapRentalRow);
 }
 
+/** 更新房源上下架状态，并限制只能由房源作者修改。 */
 export async function updateRentalStatus(id: string, openid: string, status: 0 | 1): Promise<boolean> {
   const [result] = await pool.execute<import('mysql2/promise').ResultSetHeader>(
     'UPDATE rentals SET status = ?, updated_at = NOW() WHERE id = ? AND user_openid = ?',
@@ -253,6 +267,7 @@ export async function updateRentalStatus(id: string, openid: string, status: 0 |
   return result.affectedRows > 0;
 }
 
+/** 查询用户和房源之间是否存在收藏关系。 */
 export async function getFavoriteStatus(userOpenid: string, rentalId: string): Promise<FavoriteStatus> {
   const [rows] = await pool.execute<RowDataPacket[]>(
     'SELECT 1 FROM favorites WHERE user_openid = ? AND rental_id = ?',
@@ -261,6 +276,7 @@ export async function getFavoriteStatus(userOpenid: string, rentalId: string): P
   return { isFavorited: rows.length > 0 };
 }
 
+/** 在收藏表中新增或删除记录，实现收藏状态切换。 */
 export async function toggleFavorite(userOpenid: string, rentalId: string): Promise<FavoriteStatus> {
   const { isFavorited } = await getFavoriteStatus(userOpenid, rentalId);
   if (isFavorited) {
@@ -274,6 +290,7 @@ export async function toggleFavorite(userOpenid: string, rentalId: string): Prom
   return { isFavorited: true };
 }
 
+/** 查询用户收藏的仍处于上架状态的房源列表。 */
 export async function listFavorites(userOpenid: string): Promise<RentalListing[]> {
   const schema = await readSchema();
   const columns = getSelectColumns(schema).join(', ');

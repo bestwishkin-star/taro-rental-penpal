@@ -10,19 +10,23 @@ interface LoginModalProps {
   onLogin: () => void;
 }
 
+/** 登录弹窗：拦截需要登录的操作，并提供微信登录入口。 */
 export function LoginModal({ visible, onClose, onLogin }: LoginModalProps) {
   if (!visible) return null;
 
+  /** 确认登录：交给页面层触发 Taro.login 和后端登录。 */
   const handleLogin = () => {
     onLogin();
   };
 
+  /** 取消登录：关闭弹窗并返回原页面状态。 */
   const handleCancel = () => {
     onClose();
   };
 
   return (
     <View className="login-modal">
+      {/* 遮罩层：点击空白区域关闭弹窗。 */}
       <View className="login-modal__overlay" onClick={handleCancel}>
         <View className="login-modal__card" onClick={(e) => e.stopPropagation()}>
           <View className="login-modal__header">
@@ -31,6 +35,7 @@ export function LoginModal({ visible, onClose, onLogin }: LoginModalProps) {
             <Text className="login-modal__desc">登录后即可查看个人信息和使用更多功能</Text>
           </View>
 
+          {/* 操作区：登录和暂不登录两个决策入口。 */}
           <View className="login-modal__buttons">
             <View
               className="login-modal__button login-modal__button--primary"
