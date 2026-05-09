@@ -15,6 +15,12 @@ export default defineAppConfig({
     navigationBarTextStyle: 'black',
     backgroundColor: '#f7f3ec'
   },
+  permission: {
+    'scope.userLocation': {
+      desc: '用于选择房源所在位置'
+    }
+  },
+  requiredPrivateInfos: ['chooseLocation'],
   tabBar: {
     custom: true,
     color: '#8b7761',

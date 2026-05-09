@@ -1,7 +1,7 @@
 import type { RentalRegionInput } from '@shared/contracts/location';
 import { describe, expect, it } from 'vitest';
 
-import { buildDisplayLocation, shouldClearPreciseLocation } from './location-utils';
+import { buildDisplayLocation, formatRegionSummary, shouldClearPreciseLocation } from './location-utils';
 
 describe('location utils', () => {
   it('builds display text from region and optional address', () => {
@@ -22,5 +22,25 @@ describe('location utils', () => {
         { province: 'Shanghai', city: 'Shanghai', district: 'Pudong' }
       )
     ).toBe(true);
+  });
+
+  it('keeps precise location when region is unchanged', () => {
+    expect(
+      shouldClearPreciseLocation(
+        { province: 'Shanghai', city: 'Shanghai', district: 'Pudong' },
+        { province: 'Shanghai', city: 'Shanghai', district: 'Pudong' }
+      )
+    ).toBe(false);
+  });
+
+  it('formats the find page region summary', () => {
+    expect(formatRegionSummary(null)).toBe('All regions');
+    expect(
+      formatRegionSummary({
+        province: 'Shanghai',
+        city: 'Shanghai',
+        district: 'Pudong'
+      })
+    ).toBe('Shanghai / Pudong');
   });
 });

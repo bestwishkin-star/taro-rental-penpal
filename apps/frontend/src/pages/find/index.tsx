@@ -1,3 +1,4 @@
+import type { RentalRegionInput } from '@shared/contracts/location';
 import type { ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
@@ -10,6 +11,7 @@ import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import type { FilterValue, PriceRange } from './components/FilterChips';
 import { FilterChips } from './components/FilterChips';
+import { RegionFilter } from './components/RegionFilter';
 import { RentalCard } from './components/RentalCard';
 import { SearchBar } from './components/SearchBar';
 import { SortBar } from './components/SortBar';
@@ -24,6 +26,7 @@ export default function FindPage() {
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
   const [filter, setFilter] = useState<FilterValue>('all');
   const [priceRange, setPriceRange] = useState<PriceRange>(undefined);
+  const [region, setRegion] = useState<RentalRegionInput | null>(null);
   const [sort, setSort] = useState<SortValue>('default');
   const [rentals, setRentals] = useState<RentalListing[]>([]);
   const [page, setPage] = useState(1);
@@ -31,14 +34,12 @@ export default function FindPage() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  // 防止并发请求
   const requestingRef = useRef(false);
 
   useDidShow(() => {
     setTabBarSelected(1);
   });
 
-  // 搜索关键词 500ms 防抖
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedKeyword(keyword), 500);
     return () => clearTimeout(timer);
@@ -58,14 +59,17 @@ export default function FindPage() {
           sort: sort === 'default' ? undefined : sort,
           page: String(pageNum),
           pageSize: String(PAGE_SIZE),
-          priceRange
+          priceRange,
+          province: region?.province,
+          city: region?.city,
+          district: region?.district
         };
         const data = await fetchRentals(query);
         setRentals((prev) => (append ? [...prev, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
         setPage(pageNum);
       } catch {
-        void Taro.showToast({ title: '加载失败，请重试', icon: 'none' });
+        void Taro.showToast({ title: '加载失败，请稍后重试', icon: 'none' });
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -73,10 +77,9 @@ export default function FindPage() {
         requestingRef.current = false;
       }
     },
-    [debouncedKeyword, filter, priceRange, sort]
+    [debouncedKeyword, filter, priceRange, region, sort]
   );
 
-  // 搜索/筛选/排序变化时重置到第 1 页
   useEffect(() => {
     setPage(1);
     setHasMore(true);
@@ -97,6 +100,7 @@ export default function FindPage() {
     setKeyword('');
     setFilter('all');
     setPriceRange(undefined);
+    setRegion(null);
     setSort('default');
   }
 
@@ -117,6 +121,7 @@ export default function FindPage() {
           onFilterChange={setFilter}
           onPriceRangeChange={setPriceRange}
         />
+        <RegionFilter value={region} onChange={setRegion} />
       </View>
 
       <View className="find-sort">
@@ -129,9 +134,7 @@ export default function FindPage() {
             <Text className="find-empty__text">加载中...</Text>
           </View>
         )}
-        {!loading && rentals.length === 0 && (
-          <EmptyState onReset={handleReset} />
-        )}
+        {!loading && rentals.length === 0 && <EmptyState onReset={handleReset} />}
         {rentals.map((item) => (
           <View key={item.id} className="find-list__item">
             <RentalCard
@@ -142,12 +145,12 @@ export default function FindPage() {
         ))}
         {loadingMore && (
           <View className="find-footer">
-            <Text className="find-footer__text">加载更多...</Text>
+            <Text className="find-footer__text">继续加载...</Text>
           </View>
         )}
         {!loading && !loadingMore && !hasMore && rentals.length > 0 && (
           <View className="find-footer">
-            <Text className="find-footer__text">已加载全部房源</Text>
+            <Text className="find-footer__text">没有更多房源了</Text>
           </View>
         )}
       </View>

@@ -4,7 +4,7 @@ import iconChevron from '@/assets/icons/find/icon-chevron-down.png';
 
 import './index.scss';
 
-export type SortValue = 'default' | 'price_asc' | 'price_desc' | 'newest';
+export type SortValue = 'default' | 'price_asc' | 'price_desc' | 'newest' | 'distance';
 
 interface SortOption {
   label: string;
@@ -15,6 +15,7 @@ interface SortOption {
 const OPTIONS: SortOption[] = [
   { label: '综合排序', value: 'default' },
   { label: '租金', value: 'price_asc', altValue: 'price_desc' },
+  { label: '按区域距离', value: 'distance' },
   { label: '最新发布', value: 'newest' }
 ];
 
@@ -48,11 +49,13 @@ export function SortBar({ active, onChange }: Props) {
               <Text className={`sort-bar__label${isActive ? ' sort-bar__label--active' : ''}`}>
                 {option.label}
               </Text>
-              <Image
-                src={iconChevron}
-                className={`sort-bar__chevron${active === option.altValue ? ' sort-bar__chevron--up' : ''}`}
-                mode="aspectFit"
-              />
+              {option.altValue && (
+                <Image
+                  src={iconChevron}
+                  className={`sort-bar__chevron${active === option.altValue ? ' sort-bar__chevron--up' : ''}`}
+                  mode="aspectFit"
+                />
+              )}
             </View>
           </View>
         );

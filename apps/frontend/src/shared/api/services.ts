@@ -48,6 +48,9 @@ export function fetchRentals(query?: ListRentalsQuery) {
   if (query?.page) params.page = query.page;
   if (query?.pageSize) params.pageSize = query.pageSize;
   if (query?.priceRange) params.priceRange = query.priceRange;
+  if (query?.province) params.province = query.province;
+  if (query?.city) params.city = query.city;
+  if (query?.district) params.district = query.district;
   return httpRequest<RentalListing[]>('/rentals', Object.keys(params).length ? { params } : {});
 }
 
@@ -100,11 +103,11 @@ const BROWSE_HISTORY_KEY = 'browse_history';
 const MAX_HISTORY = 30;
 
 export function saveToBrowseHistory(rental: RentalListing): void {
-  const existing: RentalListing[] = (Taro.getStorageSync(BROWSE_HISTORY_KEY)) || [];
+  const existing: RentalListing[] = Taro.getStorageSync(BROWSE_HISTORY_KEY) || [];
   const filtered = existing.filter((r) => r.id !== rental.id);
   Taro.setStorageSync(BROWSE_HISTORY_KEY, [rental, ...filtered].slice(0, MAX_HISTORY));
 }
 
 export function getBrowseHistory(): RentalListing[] {
-  return (Taro.getStorageSync(BROWSE_HISTORY_KEY)) || [];
+  return Taro.getStorageSync(BROWSE_HISTORY_KEY) || [];
 }

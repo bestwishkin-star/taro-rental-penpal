@@ -3,6 +3,7 @@ import type { RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
 
+/** 当前数据库 rentals 表是否已经具备结构化位置列。 */
 export interface RentalLocationSchema {
   province: boolean;
   city: boolean;
@@ -40,6 +41,7 @@ function buildLikePattern(value?: string | null) {
   return normalized ? `%${normalized}%` : '';
 }
 
+/** 检测结构化位置列，便于新旧数据库结构平滑兼容。 */
 export async function detectRentalLocationSchema(): Promise<RentalLocationSchema> {
   if (!schemaPromise) {
     schemaPromise = (async () => {
@@ -74,6 +76,7 @@ export async function detectRentalLocationSchema(): Promise<RentalLocationSchema
   return schemaPromise;
 }
 
+/** 生成 legacy location 展示文本，优先使用结构化区域和详细地址。 */
 export function buildRentalLocationLabel(input: {
   location?: string | null;
   province?: string | null;
@@ -99,6 +102,7 @@ export function buildRentalLocationLabel(input: {
   return parts.join(' / ') || legacyLocation;
 }
 
+/** 根据查询区域查找排序中心点，区级缺失时回退到市级或省级。 */
 export function resolveRegionCenter(query: Pick<ListRentalsQuery, 'province' | 'city' | 'district'>) {
   const province = normalizePart(query.province);
   const city = normalizePart(query.city);
@@ -111,6 +115,7 @@ export function resolveRegionCenter(query: Pick<ListRentalsQuery, 'province' | '
   return REGION_CENTERS[districtKey] ?? REGION_CENTERS[cityKey] ?? REGION_CENTERS[provinceKey] ?? null;
 }
 
+/** 构造区域筛选 SQL 片段；旧表结构下回退为 location LIKE 匹配。 */
 export function buildRegionFilterFragments(
   query: Pick<ListRentalsQuery, 'province' | 'city' | 'district'>,
   schema: RentalLocationSchema
@@ -154,6 +159,7 @@ export function buildRegionFilterFragments(
   return { conditions, params };
 }
 
+/** 构造距离排序 SQL 片段；没有坐标列时回退为区域文本匹配优先级。 */
 export function buildRegionDistanceOrderFragment(
   query: Pick<ListRentalsQuery, 'province' | 'city' | 'district'>,
   schema: RentalLocationSchema
@@ -199,6 +205,7 @@ export function buildRegionDistanceOrderFragment(
   };
 }
 
+/** 判断数据库是否至少支持省市区三列。 */
 export function hasStructuredLocationColumns(schema: RentalLocationSchema) {
   return schema.province && schema.city && schema.district;
 }

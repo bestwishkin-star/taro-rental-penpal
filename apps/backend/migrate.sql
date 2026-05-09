@@ -11,6 +11,12 @@ CREATE TABLE rentals (
   user_openid VARCHAR(64) NOT NULL,
   price VARCHAR(50) NOT NULL,
   location VARCHAR(255) NOT NULL,
+  province VARCHAR(64),
+  city VARCHAR(64),
+  district VARCHAR(64),
+  address VARCHAR(255),
+  latitude DECIMAL(10, 7),
+  longitude DECIMAL(10, 7),
   room_type VARCHAR(20) NOT NULL,
   area VARCHAR(50) NOT NULL DEFAULT '',
   experience TEXT NOT NULL,
@@ -21,5 +27,6 @@ CREATE TABLE rentals (
   created_at DATETIME NOT NULL DEFAULT NOW(),
   updated_at DATETIME NOT NULL DEFAULT NOW(),
   INDEX idx_user_openid (user_openid),
+  INDEX idx_region (province, city, district),
   INDEX idx_status_created (status, created_at)
 );

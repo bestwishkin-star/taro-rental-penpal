@@ -1,0 +1,17 @@
+.region-field {
+  min-height: 40px;
+  display: flex;
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+
+  &__value {
+    color: #2d241b;
+    font-size: 14px;
+    line-height: 20px;
+
+    &--placeholder {
+      color: #c5bab0;
+    }
+  }
+}

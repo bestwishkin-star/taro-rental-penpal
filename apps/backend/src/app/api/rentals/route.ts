@@ -37,30 +37,22 @@ export async function POST(request: Request) {
     if (!payload) return fail(BizCode.UNAUTHORIZED);
 
     const body = (await request.json()) as CreateRentalInput;
-    const hasAnyStructuredLocationField =
-      Boolean(body.province || body.city || body.district || body.address) ||
-      body.latitude !== undefined ||
-      body.longitude !== undefined;
     const hasCompleteRegion = Boolean(body.province && body.city && body.district);
 
-    if (!body.price) return fail(BizCode.INVALID_PARAMS, '请填写月租价格');
-    if (!body.roomType) return fail(BizCode.INVALID_PARAMS, '请选择租住类型');
-    if (!body.experience) return fail(BizCode.INVALID_PARAMS, '请填写居住感受');
-    if (hasAnyStructuredLocationField && !hasCompleteRegion) {
-      return fail(BizCode.INVALID_PARAMS, '请先选择省市区');
-    }
+    if (!body.price) return fail(BizCode.INVALID_PARAMS, '请填写租金');
+    if (!body.roomType) return fail(BizCode.INVALID_PARAMS, '请选择租房类型');
+    if (!body.experience) return fail(BizCode.INVALID_PARAMS, '请填写房源描述');
+    if (!hasCompleteRegion) return fail(BizCode.INVALID_PARAMS, '请选择省市区');
 
     const location =
       body.location?.trim() ||
-      (hasCompleteRegion
-        ? buildRentalLocationLabel({
-            province: body.province,
-            city: body.city,
-            district: body.district,
-            address: body.address
-          })
-        : '');
-    if (!location) return fail(BizCode.INVALID_PARAMS, '请填写所在位置');
+      buildRentalLocationLabel({
+        province: body.province,
+        city: body.city,
+        district: body.district,
+        address: body.address
+      });
+    if (!location) return fail(BizCode.INVALID_PARAMS, '请选择省市区');
 
     const result = await publishRental(payload.openid, {
       ...body,

@@ -1,9 +1,12 @@
+import type { RentalCoordinate, RentalRegionInput } from '@shared/contracts/location';
 import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
 import { BizError } from '@/shared/api/http';
 import { createRental } from '@/shared/api/services';
+import { buildDisplayLocation, shouldClearPreciseLocation } from '@/shared/location/location-utils';
+import { chooseWechatLocation } from '@/shared/location/wechat-location';
 import { useAuthStore } from '@/shared/store';
 import { PageShell } from '@/shared/ui/page-shell';
 
@@ -12,23 +15,26 @@ import iconHouse from './assets/icons/icon-house.png';
 import iconLocation from './assets/icons/icon-location.png';
 import iconPrice from './assets/icons/icon-price.png';
 import iconWechat from './assets/icons/icon-wechat.png';
+import { AddressActions } from './components/AddressActions';
 import { FormRow, FormRowDivider } from './components/FormRow';
 import { FormSection } from './components/FormSection';
 import { PhotoUploader } from './components/PhotoUploader';
+import { RegionField } from './components/RegionField';
 import { SubmitBar } from './components/SubmitBar';
 import { TagSelector } from './components/TagSelector';
 
-
 import './index.scss';
 
-const QUICK_TAGS = ['交通便利', '环境安静', '采光好', '性价比高', '邻居友好', '房东靠谱'];
+const QUICK_TAGS = ['近地铁', '可短租', '民用水电', '采光好', '独立卫浴', '可养宠物'];
 const ROOM_TYPES = ['整租', '合租'];
 
 export default function SharePage() {
   const { profileStats, patchProfileStats } = useAuthStore();
   const [photos, setPhotos] = useState<string[]>([]);
   const [price, setPrice] = useState('');
-  const [location, setLocation] = useState('');
+  const [region, setRegion] = useState<RentalRegionInput | null>(null);
+  const [address, setAddress] = useState('');
+  const [coordinate, setCoordinate] = useState<RentalCoordinate | null>(null);
   const [roomTypeIndex, setRoomTypeIndex] = useState(-1);
   const [area, setArea] = useState('');
   const [experience, setExperience] = useState('');
@@ -36,18 +42,60 @@ export default function SharePage() {
   const [wechat, setWechat] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  function handleRegionChange(nextRegion: RentalRegionInput) {
+    setRegion((previousRegion) => {
+      if (shouldClearPreciseLocation(nextRegion, previousRegion)) {
+        setAddress('');
+        setCoordinate(null);
+      }
+      return nextRegion;
+    });
+  }
+
+  async function handleChooseLocation() {
+    try {
+      const selected = await chooseWechatLocation();
+      setAddress(selected.address);
+      setCoordinate({ latitude: selected.latitude, longitude: selected.longitude });
+    } catch {
+      void Taro.showToast({ title: '未选择地址', icon: 'none' });
+    }
+  }
+
+  function handleClearAddress() {
+    setAddress('');
+    setCoordinate(null);
+  }
+
   async function handleSubmit() {
-    if (!price) { void Taro.showToast({ title: '请填写月租价格', icon: 'none' }); return; }
-    if (!location) { void Taro.showToast({ title: '请填写所在位置', icon: 'none' }); return; }
-    if (roomTypeIndex < 0) { void Taro.showToast({ title: '请选择租住类型', icon: 'none' }); return; }
-    if (!experience) { void Taro.showToast({ title: '请填写居住感受', icon: 'none' }); return; }
+    if (!price) {
+      void Taro.showToast({ title: '请填写租金', icon: 'none' });
+      return;
+    }
+    if (!region) {
+      void Taro.showToast({ title: '请选择省市区', icon: 'none' });
+      return;
+    }
+    if (roomTypeIndex < 0) {
+      void Taro.showToast({ title: '请选择租房类型', icon: 'none' });
+      return;
+    }
+    if (!experience) {
+      void Taro.showToast({ title: '请填写房源描述', icon: 'none' });
+      return;
+    }
 
     setSubmitting(true);
     try {
-      // photos 已在选图时上传完毕，此处直接使用服务端 URL
       await createRental({
         price,
-        location,
+        location: buildDisplayLocation(region, address),
+        province: region.province,
+        city: region.city,
+        district: region.district,
+        address: address || undefined,
+        latitude: coordinate?.latitude,
+        longitude: coordinate?.longitude,
         roomType: ROOM_TYPES[roomTypeIndex],
         area: area || undefined,
         experience,
@@ -56,13 +104,13 @@ export default function SharePage() {
         photos
       });
 
-      void Taro.showToast({ title: '发布成功！', icon: 'success' });
+      void Taro.showToast({ title: '发布成功', icon: 'success' });
       patchProfileStats({
         publishCount: profileStats.publishCount + 1
       });
       setTimeout(() => Taro.navigateBack(), 1500);
     } catch (err) {
-      const msg = err instanceof BizError ? err.message : '发布失败，请重试';
+      const msg = err instanceof BizError ? err.message : '发布失败，请稍后重试';
       void Taro.showToast({ title: msg, icon: 'none' });
     } finally {
       setSubmitting(false);
@@ -72,33 +120,28 @@ export default function SharePage() {
   return (
     <PageShell>
       <ScrollView scrollY showScrollbar={false} className="share-scroll">
-        <FormSection title="实拍图片" subtitle="上传真实房源照片，最多 9 张">
+        <FormSection title="房源照片" subtitle="建议上传真实清晰的房间、客厅或周边照片">
           <PhotoUploader photos={photos} onChange={setPhotos} />
         </FormSection>
 
-        <FormSection title="基本信息">
+        <FormSection title="基础信息">
           <View className="share-form-card">
-            <FormRow icon={iconPrice} label="月租价格">
+            <FormRow icon={iconPrice} label="月租">
               <Text className="share-unit">¥</Text>
               <Input
                 className="share-input"
                 type="digit"
-                placeholder="请输入月租金额"
+                placeholder="请输入租金"
                 placeholderClass="share-placeholder"
                 value={price}
                 onInput={(e) => setPrice(e.detail.value)}
               />
             </FormRow>
             <FormRowDivider />
-            <FormRow icon={iconLocation} label="所在位置">
-              <Input
-                className="share-input share-input--flex"
-                placeholder="小区名称 / 街道"
-                placeholderClass="share-placeholder"
-                value={location}
-                onInput={(e) => setLocation(e.detail.value)}
-              />
+            <FormRow icon={iconLocation} label="位置">
+              <RegionField value={region} onChange={handleRegionChange} />
             </FormRow>
+            <AddressActions address={address} onChooseLocation={handleChooseLocation} onClear={handleClearAddress} />
             <FormRowDivider />
             <Picker
               mode="selector"
@@ -106,14 +149,14 @@ export default function SharePage() {
               value={roomTypeIndex}
               onChange={(e) => setRoomTypeIndex(Number(e.detail.value))}
             >
-              <FormRow icon={iconHouse} label="租住类型" arrow>
+              <FormRow icon={iconHouse} label="租房类型" arrow>
                 <Text className={`share-picker-val${roomTypeIndex < 0 ? ' share-picker-val--empty' : ''}`}>
                   {roomTypeIndex >= 0 ? ROOM_TYPES[roomTypeIndex] : '请选择'}
                 </Text>
               </FormRow>
             </Picker>
             <FormRowDivider />
-            <FormRow icon={iconArea} label="房屋面积">
+            <FormRow icon={iconArea} label="面积">
               <Input
                 className="share-input"
                 type="digit"
@@ -127,10 +170,10 @@ export default function SharePage() {
           </View>
         </FormSection>
 
-        <FormSection title="居住感受" subtitle="分享你真实的居住体验，帮助其他人找到合适的家">
+        <FormSection title="房源描述" subtitle="写清入住时间、室友情况、通勤和看房方式">
           <Textarea
             className="share-textarea"
-            placeholder="例如：小区安静，邻居友好，附近有地铁和超市，房东很负责任..."
+            placeholder="例如：近地铁，卧室朝南，适合一人居住..."
             placeholderClass="share-placeholder"
             value={experience}
             onInput={(e) => setExperience(e.detail.value)}
@@ -142,7 +185,7 @@ export default function SharePage() {
             selected={selectedTags}
             onToggle={(tag) =>
               setSelectedTags((prev) =>
-                prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+                prev.includes(tag) ? prev.filter((current) => current !== tag) : [...prev, tag]
               )
             }
           />
@@ -150,7 +193,7 @@ export default function SharePage() {
 
         <FormSection title="联系方式">
           <View className="share-form-card">
-            <FormRow icon={iconWechat} label="微信号">
+            <FormRow icon={iconWechat} label="微信">
               <Input
                 className="share-input share-input--flex"
                 placeholder="请输入微信号"
@@ -161,7 +204,7 @@ export default function SharePage() {
             </FormRow>
           </View>
           <View className="share-privacy">
-            <Text className="share-privacy__text">🔒 你的联系方式仅对匹配成功的笔友可见</Text>
+            <Text className="share-privacy__text">联系方式仅用于租客沟通，请勿填写敏感证件信息。</Text>
           </View>
         </FormSection>
       </ScrollView>
