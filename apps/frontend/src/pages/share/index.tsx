@@ -1,12 +1,11 @@
-import type { RentalCoordinate, RentalRegionInput } from '@shared/contracts/location';
+import type { RentalRegionInput } from '@shared/contracts/location';
 import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useState } from 'react';
 
 import { BizError } from '@/shared/api/http';
 import { createRental } from '@/shared/api/services';
-import { buildDisplayLocation, shouldClearPreciseLocation } from '@/shared/location/location-utils';
-import { chooseWechatLocation } from '@/shared/location/wechat-location';
+import { buildDisplayLocation } from '@/shared/location/location-utils';
 import { useAuthStore } from '@/shared/store';
 import { PageShell } from '@/shared/ui/page-shell';
 
@@ -15,7 +14,6 @@ import iconHouse from './assets/icons/icon-house.png';
 import iconLocation from './assets/icons/icon-location.png';
 import iconPrice from './assets/icons/icon-price.png';
 import iconWechat from './assets/icons/icon-wechat.png';
-import { AddressActions } from './components/AddressActions';
 import { FormRow, FormRowDivider } from './components/FormRow';
 import { FormSection } from './components/FormSection';
 import { PhotoUploader } from './components/PhotoUploader';
@@ -36,8 +34,6 @@ export default function SharePage() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [price, setPrice] = useState('');
   const [region, setRegion] = useState<RentalRegionInput | null>(null);
-  const [address, setAddress] = useState('');
-  const [coordinate, setCoordinate] = useState<RentalCoordinate | null>(null);
   const [roomTypeIndex, setRoomTypeIndex] = useState(-1);
   const [area, setArea] = useState('');
   const [experience, setExperience] = useState('');
@@ -45,32 +41,9 @@ export default function SharePage() {
   const [wechat, setWechat] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  /** 更新省市区时，如果行政区变化则清空已选的精确地图地址。 */
+  /** 更新省市区字段；当前主体不申请地理位置权限，仅保留行政区选择。 */
   function handleRegionChange(nextRegion: RentalRegionInput) {
-    setRegion((previousRegion) => {
-      if (shouldClearPreciseLocation(nextRegion, previousRegion)) {
-        setAddress('');
-        setCoordinate(null);
-      }
-      return nextRegion;
-    });
-  }
-
-  /** 调用微信地图选点，回填详细地址和经纬度。 */
-  async function handleChooseLocation() {
-    try {
-      const selected = await chooseWechatLocation();
-      setAddress(selected.address);
-      setCoordinate({ latitude: selected.latitude, longitude: selected.longitude });
-    } catch {
-      void Taro.showToast({ title: '未选择地址', icon: 'none' });
-    }
-  }
-
-  /** 清空精确地址，同时移除经纬度，避免提交过期坐标。 */
-  function handleClearAddress() {
-    setAddress('');
-    setCoordinate(null);
+    setRegion(nextRegion);
   }
 
   /** 校验必填项并提交房源；成功后同步个人中心发布数量。 */
@@ -96,13 +69,10 @@ export default function SharePage() {
     try {
       await createRental({
         price,
-        location: buildDisplayLocation(region, address),
+        location: buildDisplayLocation(region),
         province: region.province,
         city: region.city,
         district: region.district,
-        address: address || undefined,
-        latitude: coordinate?.latitude,
-        longitude: coordinate?.longitude,
         roomType: ROOM_TYPES[roomTypeIndex],
         area: area || undefined,
         experience,
@@ -149,8 +119,6 @@ export default function SharePage() {
             <FormRow icon={iconLocation} label="位置">
               <RegionField value={region} onChange={handleRegionChange} />
             </FormRow>
-            {/* 地图精确地址操作：选择或清空微信地图返回的地址。 */}
-            <AddressActions address={address} onChooseLocation={handleChooseLocation} onClear={handleClearAddress} />
             <FormRowDivider />
             <Picker
               mode="selector"

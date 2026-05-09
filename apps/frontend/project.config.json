@@ -2,7 +2,7 @@
   "miniprogramRoot": "dist/",
   "projectname": "taro-rental-penpal-v2",
   "description": "Taro rental penpal mini program",
-  "appid": "touristappid",
+  "appid": "wxe8fc348778709df1",
   "setting": {
     "es6": true,
     "minified": true,
