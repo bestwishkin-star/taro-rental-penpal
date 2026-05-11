@@ -48,6 +48,8 @@ export function useAsyncData<TData>(loader: () => Promise<TData>, deps: unknown[
     return () => {
       active = false;
     };
+    // 自定义 Hook 将依赖数组交给调用方维护，这里不能展开成固定字面量。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   return state;

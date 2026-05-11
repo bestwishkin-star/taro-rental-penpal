@@ -1,4 +1,4 @@
-
+﻿
 import type { ApiResponse } from '@shared/contracts/api';
 import { BizCode } from '@shared/errors';
 import Taro from '@tarojs/taro';
@@ -32,7 +32,7 @@ export class BizError extends Error {
 interface RequestOptions<TBody> {
   body?: TBody;
   params?: Record<string, string | undefined>;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 }
 
 export async function uploadFile<TData>(path: string, filePath: string): Promise<TData> {
@@ -50,7 +50,7 @@ export async function uploadFile<TData>(path: string, filePath: string): Promise
   });
 
   if (response.statusCode >= 400) {
-    throw new BizError(BizCode.UNKNOWN, `上传失败 [${response.statusCode}]`);
+    throw new BizError(BizCode.UNKNOWN, `涓婁紶澶辫触 [${response.statusCode}]`);
   }
 
   const result = JSON.parse(response.data) as ApiResponse<TData>;
@@ -89,7 +89,7 @@ export async function httpRequest<TData, TBody = undefined>(
   });
 
   if (response.statusCode >= 400 || !response.data) {
-    throw new BizError(BizCode.UNKNOWN, `网络请求失败 [${response.statusCode}]`);
+    throw new BizError(BizCode.UNKNOWN, `缃戠粶璇锋眰澶辫触 [${response.statusCode}]`);
   }
 
   const { code, message, data } = response.data;

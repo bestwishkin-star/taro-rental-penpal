@@ -1,15 +1,19 @@
-import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
+﻿import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import type { ConversationPreview } from '@shared/contracts/chat';
 import type { OverviewPayload } from '@shared/contracts/overview';
 import type {
+  CreateRentalCommentInput,
   CreateRentalInput,
+  CreateRentalReportInput,
   CreateRentalResponse,
   FavoriteStatus,
   ListRentalsQuery,
+  RentalComment,
   RentalDetail,
   RentalListing,
   RentalStatus,
-  UpdateRentalStatusInput
+  UpdateRentalStatusInput,
+  UpdateRentalSupplementInput
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 import Taro from '@tarojs/taro';
@@ -61,13 +65,19 @@ export function updateRentalStatus(id: string, status: RentalStatus) {
   });
 }
 
+export function updateRentalSupplement(id: string, input: UpdateRentalSupplementInput) {
+  return httpRequest<null, UpdateRentalSupplementInput>(`/rentals/${id}`, {
+    method: 'PATCH',
+    body: input
+  });
+}
+
 export function fetchConversations() {
   return httpRequest<ConversationPreview[]>('/chat/conversations');
 }
 
 export async function uploadPhoto(filePath: string): Promise<{ url: string }> {
   const result = await uploadFile<{ url: string }>('/upload', filePath);
-  // 后端返回相对路径 /uploads/xxx，需要拼成完整 URL 供小程序加载
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   return { url: `${serverBase}${result.url}` };
 }
@@ -97,6 +107,28 @@ export function fetchFavoriteStatus(id: string) {
 
 export function toggleFavorite(id: string) {
   return httpRequest<FavoriteStatus>(`/rentals/${id}/favorite`, { method: 'POST' });
+}
+
+export function fetchRentalComments(id: string) {
+  return httpRequest<RentalComment[]>(`/rentals/${id}/comments`);
+}
+
+export function createRentalComment(id: string, content: string) {
+  return httpRequest<RentalComment, CreateRentalCommentInput>(`/rentals/${id}/comments`, {
+    method: 'POST',
+    body: { content }
+  });
+}
+
+export function deleteRentalComment(id: string) {
+  return httpRequest<null>(`/rental-comments/${id}`, { method: 'DELETE' });
+}
+
+export function createRentalReport(id: string, input: CreateRentalReportInput) {
+  return httpRequest<{ id: string }, CreateRentalReportInput>(`/rentals/${id}/reports`, {
+    method: 'POST',
+    body: input
+  });
 }
 
 const BROWSE_HISTORY_KEY = 'browse_history';

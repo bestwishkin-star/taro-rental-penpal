@@ -4,7 +4,7 @@ function normalizeSegments(segments: string[]) {
   return segments.map((segment) => segment.trim()).filter(Boolean);
 }
 
-/** 将行政区划和可选详细地址拼成兼容旧字段的展示位置。 */
+/** 将省市区和可选地址拼成界面展示位置。 */
 export function buildDisplayLocation(region: RentalRegionInput, address?: string) {
   const province = region.province.trim();
   const city = region.city.trim();
@@ -15,7 +15,7 @@ export function buildDisplayLocation(region: RentalRegionInput, address?: string
   return [...normalizeSegments(regionSegments), ...addressSegments].join(' / ');
 }
 
-/** 判断切换行政区后是否需要清空旧的地图选点地址和坐标。 */
+/** 判断区域变化后是否需要清空精确位置。 */
 export function shouldClearPreciseLocation(
   nextRegion: RentalRegionInput,
   previousRegion?: RentalRegionInput | null
@@ -29,8 +29,8 @@ export function shouldClearPreciseLocation(
   );
 }
 
-/** 找房页区域筛选的摘要文案，未选择时返回空状态文案。 */
+/** 发现页区域筛选摘要文案，未选择时返回空状态文案。 */
 export function formatRegionSummary(region: RentalRegionInput | null) {
-  if (!region) return 'All regions';
+  if (!region) return '全部区域';
   return buildDisplayLocation(region);
 }
