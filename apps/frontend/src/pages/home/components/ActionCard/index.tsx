@@ -1,4 +1,4 @@
-import { Image, Text, View } from '@tarojs/components';
+﻿import { Image, Text, View } from '@tarojs/components';
 
 import iconChevronRight from '@/assets/icons/common/icon-chevron-right.png';
 
@@ -11,15 +11,10 @@ interface Props {
   onClick: () => void;
 }
 
-/** 首页快捷入口卡片：展示图标、标题、说明和右侧箭头。 */
+/** 首页行动入口卡片。 */
 export function ActionCard({ icon, label, desc, onClick }: Props) {
   return (
-    <View
-      className="action-card"
-      hoverClass="action-card--active"
-      onClick={onClick}
-    >
-      {/* 左侧图标用于区分找房和发布两个主要动作。 */}
+    <View className="action-card" hoverClass="action-card--active" onClick={onClick}>
       <Image src={icon} className="action-card__icon" mode="aspectFit" />
       <View className="action-card__body">
         <Text className="action-card__label">{label}</Text>

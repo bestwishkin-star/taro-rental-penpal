@@ -1,3 +1,3 @@
 export default {
-  navigationBarTitleText: '找房'
+  navigationBarTitleText: '屋檐故事'
 };

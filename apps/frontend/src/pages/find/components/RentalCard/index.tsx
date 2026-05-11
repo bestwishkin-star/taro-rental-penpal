@@ -1,7 +1,5 @@
-import { Image, Text, View } from '@tarojs/components';
-import { useState } from 'react';
-
 import type { RentalListing } from '@shared/contracts/rental';
+import { Image, Text, View } from '@tarojs/components';
 
 import { frontendEnv } from '@/shared/config/env';
 
@@ -9,18 +7,9 @@ import './index.scss';
 
 interface Props {
   item: RentalListing;
-  onClick?: () => void;
+  onClick: () => void;
 }
 
-/** 根据房源标签内容选择视觉强调色。 */
-function getTagStyle(tag: string): 'accent' | 'green' | 'neutral' {
-  if (tag.includes('地铁') || tag.includes('交通')) return 'accent';
-  if (tag.includes('押') || tag.includes('朝南') || tag.includes('采光')) return 'green';
-  return 'neutral';
-}
-
-/** 将存储的图片绝对 URL 替换为当前 serverBase，兼容 IP 变更 */
-/** 统一处理上传图片地址，兼容相对路径和包含 uploads 的完整路径。 */
 function normalizePhotoUrl(url: string): string {
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   if (url.startsWith('/')) return `${serverBase}${url}`;
@@ -29,52 +18,37 @@ function normalizePhotoUrl(url: string): string {
   return url;
 }
 
-/** 房源卡片：展示封面、标题、标签、位置面积和月租价格。 */
+/** 屋檐故事卡片，突出标题、地点、标签和讨论热度。 */
 export function RentalCard({ item, onClick }: Props) {
-  const [imgError, setImgError] = useState(false);
-  // 卡片空间有限，仅展示前两个标签。
-  const displayTags = item.tags.slice(0, 2);
-  const rawPhoto = item.photos[0];
-  const coverPhoto = rawPhoto ? normalizePhotoUrl(rawPhoto) : undefined;
-  const metaParts = [item.location];
-  if (item.area) metaParts.push(`${item.area}㎡`);
+  const cover = item.photos[0];
+  const coverUrl = cover ? normalizePhotoUrl(cover) : '';
+  const locationText = [item.city, item.district].filter(Boolean).join(' ') || item.location;
+  const priceText = item.price ? `¥${item.price}/月` : '参考信息待补充';
 
   return (
     <View className="rental-card" onClick={onClick}>
-      {/* 封面区：图片加载失败时回退到占位图块。 */}
-      {coverPhoto && !imgError ? (
-        <Image
-          src={coverPhoto}
-          className="rental-card__image"
-          mode="aspectFill"
-          onError={() => setImgError(true)}
-        />
-      ) : (
-        <View className="rental-card__image rental-card__image--placeholder" />
-      )}
-      {/* 信息区：标题、标签、位置和价格。 */}
-      <View className="rental-card__content">
-        <Text className="rental-card__title" numberOfLines={2}>
-          {item.title}
-        </Text>
-        {displayTags.length > 0 && (
+      <View className="rental-card__cover">
+        {coverUrl ? <Image src={coverUrl} mode="aspectFill" className="rental-card__img" /> : null}
+        <View className="rental-card__cover-mask" />
+        <View className="rental-card__price">
+          <Text className="rental-card__price-text">{priceText}</Text>
+        </View>
+      </View>
+      <View className="rental-card__body">
+        <Text className="rental-card__title">{item.title}</Text>
+        <Text className="rental-card__location">{locationText}</Text>
+        <Text className="rental-card__desc">{item.contentPreview || item.title}</Text>
+        {item.tags.length > 0 && (
           <View className="rental-card__tags">
-            {displayTags.map((tag) => {
-              const style = getTagStyle(tag);
-              return (
-                <View key={tag} className={`rental-card__tag rental-card__tag--${style}`}>
-                  <Text className={`rental-card__tag-text rental-card__tag-text--${style}`}>
-                    {tag}
-                  </Text>
-                </View>
-              );
-            })}
+            {item.tags.slice(0, 3).map((tag) => (
+              <View key={tag} className="rental-card__tag">
+                <Text className="rental-card__tag-text">{tag}</Text>
+              </View>
+            ))}
           </View>
         )}
-        <Text className="rental-card__meta">{metaParts.join(' · ')}</Text>
-        <View className="rental-card__price-row">
-          <Text className="rental-card__price">¥ {item.price}</Text>
-          <Text className="rental-card__price-unit">/月</Text>
+        <View className="rental-card__meta">
+          <Text className="rental-card__meta-text">{item.commentCount} 条讨论</Text>
         </View>
       </View>
     </View>

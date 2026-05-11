@@ -22,7 +22,7 @@ const tabs = [
   },
   {
     pagePath: '/pages/find/index',
-    label: '找房',
+    label: '发现',
     icon: findIcon,
     activeIcon: findActiveIcon
   },

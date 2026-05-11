@@ -41,14 +41,14 @@
 
 .share-textarea {
   width: 100%;
-  min-height: 110px;
-  padding: 12px;
+  min-height: 72px;
+  padding: 8px 10px;
   border-radius: 12px;
   background: #faf6ee;
   border: 1px solid rgba(109, 84, 48, 0.1);
   color: #2d241b;
   font-size: 14px;
-  line-height: 1.7;
+  line-height: 1.45;
   box-sizing: border-box;
 }
 
@@ -66,4 +66,64 @@
     font-size: 12px;
     line-height: 1.5;
   }
+}
+
+.share-title-input {
+  width: 100%;
+  min-height: 48px;
+  color: #2d241b;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.share-textarea--note {
+  min-height: 72px;
+  padding-bottom: 2px;
+}
+
+.share-text-count {
+  display: block;
+  margin-top: 6px;
+  color: #9b8a76;
+  font-size: 12px;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.share-pledge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 16px 16px;
+  padding: 2px 0;
+}
+
+.share-pledge__box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border-radius: 4px;
+  border: 1px solid #b9a58e;
+  background: #fff;
+}
+
+.share-pledge__box--checked {
+  border-color: #2d6a4f;
+  background: #2d6a4f;
+}
+
+.share-pledge__mark {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.share-pledge__text {
+  color: #8b7761;
+  font-size: 13px;
+  line-height: 1.4;
 }

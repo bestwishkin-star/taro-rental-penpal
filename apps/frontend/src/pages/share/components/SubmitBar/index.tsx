@@ -10,7 +10,8 @@ interface Props {
   onSubmit: () => void;
 }
 
-export function SubmitBar({ text = '发布分享', loading = false, onSubmit }: Props) {
+/** 底部固定提交栏，用于提交屋檐记或补充信息。 */
+export function SubmitBar({ text = '提交', loading = false, onSubmit }: Props) {
   return (
     <View className="submit-bar">
       <View
@@ -19,7 +20,7 @@ export function SubmitBar({ text = '发布分享', loading = false, onSubmit }: 
         onClick={onSubmit}
       >
         <Image src={iconSend} className="submit-bar__icon" mode="aspectFit" />
-        <Text className="submit-bar__text">{loading ? '发布中...' : text}</Text>
+        <Text className="submit-bar__text">{loading ? '提交中...' : text}</Text>
       </View>
     </View>
   );

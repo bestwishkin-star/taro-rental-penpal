@@ -1,5 +1,4 @@
-import type { UserProfileInput } from '@shared/contracts/user';
-
+﻿import type { UserProfileInput } from '@shared/contracts/user';
 import { Input, Text, Textarea, View } from '@tarojs/components';
 
 import './index.scss';
@@ -17,7 +16,7 @@ interface RowProps {
   multiline?: boolean;
 }
 
-function SettingsRow({ label, value, placeholder = '请填写', onInput, multiline = false }: RowProps) {
+function SettingsRow({ label, value, placeholder = '请输入', onInput, multiline = false }: RowProps) {
   return (
     <View className="settings-row">
       <Text className="settings-row__label">{label}</Text>
@@ -41,11 +40,12 @@ function SettingsRow({ label, value, placeholder = '请填写', onInput, multili
   );
 }
 
+/** 设置表单：维护昵称和居住偏好，便于社区内容推荐。 */
 export function SettingsForm({ values, onChange }: Props) {
   return (
     <View className="settings-form">
       <View className="settings-form__section">
-        <Text className="settings-form__section-title">基本信息</Text>
+        <Text className="settings-form__section-title">个人资料</Text>
         <View className="settings-form__group">
           <SettingsRow
             label="昵称"
@@ -57,40 +57,40 @@ export function SettingsForm({ values, onChange }: Props) {
       </View>
 
       <View className="settings-form__section">
-        <Text className="settings-form__section-title">租房偏好</Text>
+        <Text className="settings-form__section-title">居住偏好</Text>
         <View className="settings-form__group">
           <SettingsRow
             label="城市"
             value={values.city}
-            placeholder="如：上海"
+            placeholder="例如：北京"
             onInput={(v) => onChange('city', v)}
           />
           <View className="settings-form__divider" />
           <SettingsRow
             label="预算"
             value={values.budget}
-            placeholder="如：3000-5000"
+            placeholder="例如：3000-5000"
             onInput={(v) => onChange('budget', v)}
           />
           <View className="settings-form__divider" />
           <SettingsRow
             label="偏好区域"
             value={values.preferredDistrict}
-            placeholder="如：浦东新区"
+            placeholder="例如：望京、回龙观"
             onInput={(v) => onChange('preferredDistrict', v)}
           />
           <View className="settings-form__divider" />
           <SettingsRow
-            label="入住日期"
+            label="入住时间"
             value={values.moveInDate}
-            placeholder="如：2026-06-01"
+            placeholder="例如：2026-06-01"
             onInput={(v) => onChange('moveInDate', v)}
           />
           <View className="settings-form__divider" />
           <SettingsRow
-            label="室友期望"
+            label="同住期待"
             value={values.roommateExpectation}
-            placeholder="描述你期望的室友"
+            placeholder="写下你对同住环境的期待"
             onInput={(v) => onChange('roommateExpectation', v)}
             multiline
           />

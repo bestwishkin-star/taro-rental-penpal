@@ -9,41 +9,36 @@ import { setTabBarSelected } from '@/shared/utils/tab-bar';
 import { ActionCard } from './components/ActionCard';
 import { HeroCarousel } from './components/HeroCarousel';
 
-
 import './index.scss';
 
-/** 首页：承载轮播入口、找房/发布快捷入口和底部提示信息。 */
+/** 首页：提供浏览屋檐故事和记录居住体验的核心入口。 */
 export default function HomePage() {
   useDidShow(() => {
-    // 每次回到首页时同步自定义 TabBar 的选中态。
     setTabBarSelected(0);
   });
 
   return (
     <PageShell>
-      {/* 顶部轮播：展示主要租房场景和产品引导。 */}
       <HeroCarousel />
 
-      {/* 核心操作区：进入找房列表或发布房源表单。 */}
       <View className="home-actions">
         <ActionCard
           icon={iconFind}
-          label="我要找房"
-          desc="浏览附近房源，找到心仪的住所"
+          label="翻看屋檐故事"
+          desc="看看其他人的真实体验、避坑提醒和费用参考"
           onClick={() => void Taro.switchTab({ url: '/pages/find/index' })}
         />
         <ActionCard
           icon={iconShare}
-          label="我要分享"
-          desc="发布你的房源信息，寻找合适的室友"
+          label="写下一方屋檐下"
+          desc="把你的居住冷暖写成一篇屋檐记"
           onClick={() => void Taro.navigateTo({ url: '/pages/share/index' })}
         />
       </View>
 
-      {/* 底部提示区：说明平台安全和沟通建议。 */}
       <View className="home-tips">
-        <Text className="home-tips__title">温馨提示</Text>
-        <Text className="home-tips__text">真实信息，安全交流，共建友好社区</Text>
+        <Text className="home-tips__title">屋檐记发布提示</Text>
+        <Text className="home-tips__text">落笔前请隐藏手机号、门牌号、合同号等隐私信息，凭证仅供平台复核。</Text>
       </View>
     </PageShell>
   );

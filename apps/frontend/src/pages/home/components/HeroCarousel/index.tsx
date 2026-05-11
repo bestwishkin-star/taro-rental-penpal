@@ -3,63 +3,56 @@ import { useState } from 'react';
 
 import './index.scss';
 
-// 首页轮播数据：每一项包含标题、副标题和远程背景图。
-const SLIDES = [
+const HERO_ITEMS = [
   {
-    title: '寻一处心安之所',
-    subtitle: '每个房间都藏着一个故事，每次相遇都是一段缘分',
-    bgImage: 'https://images.unsplash.com/photo-1759139445627-5ce9d5fac8f9?w=800&q=80'
+    title: '一方屋檐下',
+    subtitle: '用真实照片和文字留下居住的冷暖，给后来者一点确定感。',
+    background: '#3f5f64'
   },
   {
-    title: '遇见理想的栖居',
-    subtitle: '温暖的空间，志趣相投的伙伴，开启美好生活',
-    bgImage: 'https://images.unsplash.com/photo-1658288644949-4c09a9b30435?w=800&q=80'
+    title: '屋檐里的明暗',
+    subtitle: '通勤、隔音、采光、费用和周边生活，都可以被认真讨论。',
+    background: '#7a5b48'
   },
   {
-    title: '在这里，找到归属感',
-    subtitle: '不只是一间房，更是一段温暖的旅程与陪伴',
-    bgImage: 'https://images.unsplash.com/photo-1762845872088-12c352bbb119?w=800&q=80'
+    title: '先落笔，再补充',
+    subtitle: '先写下这段屋檐下的生活，之后再补充费用、区域和通勤等参考。',
+    background: '#5f5d7a'
   }
 ];
 
-/** 首页头图轮播：自动播放并用自定义圆点展示当前页。 */
+/** 首页轮播：强调社区屋檐故事，而不是交易平台入口。 */
 export function HeroCarousel() {
   const [current, setCurrent] = useState(0);
 
   return (
     <View className="hero-carousel">
-      {/* 图片轮播主体：承载背景图、遮罩和文案。 */}
       <Swiper
         className="hero-carousel__swiper"
-        indicatorDots={false}
-        autoplay
-        interval={5000}
         circular
-        onChange={(e) => setCurrent(e.detail.current)}
+        autoplay
+        current={current}
+        onChange={(event) => setCurrent(event.detail.current)}
       >
-        {SLIDES.map((slide, index) => (
-          <SwiperItem key={index}>
+        {HERO_ITEMS.map((item) => (
+          <SwiperItem key={item.title}>
             <View className="hero-carousel__item-wrapper">
-              <View
-                className="hero-carousel__item"
-                style={{ backgroundImage: `url(${slide.bgImage})` }}
-              >
+              <View className="hero-carousel__item" style={{ background: item.background }}>
                 <View className="hero-carousel__overlay" />
                 <View className="hero-carousel__content">
-                  <Text className="hero-carousel__eyebrow">租房笔友</Text>
-                  <Text className="hero-carousel__title">{slide.title}</Text>
-                  <Text className="hero-carousel__subtitle">{slide.subtitle}</Text>
+                  <Text className="hero-carousel__eyebrow">居住笔友</Text>
+                  <Text className="hero-carousel__title">{item.title}</Text>
+                  <Text className="hero-carousel__subtitle">{item.subtitle}</Text>
                 </View>
               </View>
             </View>
           </SwiperItem>
         ))}
       </Swiper>
-      {/* 自定义指示器：跟随 Swiper current 状态切换。 */}
       <View className="hero-carousel__dots">
-        {SLIDES.map((_, index) => (
+        {HERO_ITEMS.map((item, index) => (
           <View
-            key={index}
+            key={item.title}
             className={`hero-carousel__dot${current === index ? ' hero-carousel__dot--active' : ''}`}
           />
         ))}

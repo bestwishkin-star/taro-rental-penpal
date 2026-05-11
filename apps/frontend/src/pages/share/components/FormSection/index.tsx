@@ -1,6 +1,5 @@
+﻿import { Text, View } from '@tarojs/components';
 import type { PropsWithChildren } from 'react';
-
-import { Text, View } from '@tarojs/components';
 
 import './index.scss';
 

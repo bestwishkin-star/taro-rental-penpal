@@ -1,10 +1,10 @@
 import type { RentalRegionInput } from '@shared/contracts/location';
 import { Input, Picker, ScrollView, Text, Textarea, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { BizError } from '@/shared/api/http';
-import { createRental } from '@/shared/api/services';
+import { createRental, fetchRental, updateRentalSupplement } from '@/shared/api/services';
 import { buildDisplayLocation } from '@/shared/location/location-utils';
 import { useAuthStore } from '@/shared/store';
 import { PageShell } from '@/shared/ui/page-shell';
@@ -13,182 +13,332 @@ import iconArea from './assets/icons/icon-area.png';
 import iconHouse from './assets/icons/icon-house.png';
 import iconLocation from './assets/icons/icon-location.png';
 import iconPrice from './assets/icons/icon-price.png';
-import iconWechat from './assets/icons/icon-wechat.png';
 import { FormRow, FormRowDivider } from './components/FormRow';
 import { FormSection } from './components/FormSection';
 import { PhotoUploader } from './components/PhotoUploader';
 import { RegionField } from './components/RegionField';
 import { SubmitBar } from './components/SubmitBar';
-import { TagSelector } from './components/TagSelector';
+import { RENTAL_TYPES, ROOM_TYPES, STAY_STAGES } from './share-options';
+import { validateRentalSupplementDraft, validateShareExperienceDraft } from './share-validation';
 
 import './index.scss';
 
-// 发布表单的快捷标签，提交时原样写入房源 tags。
+type InputEvent = { detail: { value: string } };
+type PickerChangeEvent = { detail: { value: string | number } };
+type TextareaInputEvent = { detail: { value: string } };
 
-const QUICK_TAGS = ['近地铁', '可短租', '民用水电', '采光好', '独立卫浴', '可养宠物'];
-const ROOM_TYPES = ['整租', '合租'];
+function getPickerIndex(event: PickerChangeEvent) {
+  return Number(event.detail.value);
+}
 
-/** 发布房源页：收集图片、位置、基础信息、描述和联系方式。 */
+function getRouteId() {
+  const params = Taro.getCurrentInstance().router?.params;
+  return typeof params?.id === 'string' && params.id ? params.id : undefined;
+}
+
+/** 屋檐记发布页：首次记录居住体验，或从我的屋檐记进入补充参考信息。 */
 export default function SharePage() {
   const { profileStats, patchProfileStats } = useAuthStore();
+  const [rentalId, setRentalId] = useState<string | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [price, setPrice] = useState('');
   const [region, setRegion] = useState<RentalRegionInput | null>(null);
+  const [landmark, setLandmark] = useState('');
   const [roomTypeIndex, setRoomTypeIndex] = useState(-1);
+  const [rentalTypeIndex, setRentalTypeIndex] = useState(1);
+  const [stayStageIndex, setStayStageIndex] = useState(-1);
   const [area, setArea] = useState('');
+  const [commute, setCommute] = useState('');
   const [experience, setExperience] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [wechat, setWechat] = useState('');
+  const [truthPledge, setTruthPledge] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  /** 更新省市区字段；当前主体不申请地理位置权限，仅保留行政区选择。 */
+  const isSupplementMode = Boolean(rentalId);
+
+  useEffect(() => {
+    const id = getRouteId();
+    if (!id) return;
+
+    setRentalId(id);
+    void Taro.setNavigationBarTitle({ title: '补充参考信息' });
+    fetchRental(id)
+      .then((data) => {
+        setPrice(data.price === '待补充' ? '' : data.price || '');
+        setRegion(
+          data.province && data.city && data.district
+            ? { province: data.province, city: data.city, district: data.district }
+            : null
+        );
+        setLandmark(data.landmark || '');
+        setRoomTypeIndex(
+          data.roomType && data.roomType !== '待补充' ? ROOM_TYPES.indexOf(data.roomType) : -1
+        );
+
+        const rentalTypeIndexFromData = RENTAL_TYPES.findIndex((item) => item.value === data.rentalType);
+        setRentalTypeIndex(rentalTypeIndexFromData >= 0 ? rentalTypeIndexFromData : 1);
+        setStayStageIndex(
+          data.stayStage ? STAY_STAGES.findIndex((item) => item.value === data.stayStage) : -1
+        );
+        setArea(data.area || '');
+        setCommute(data.commute || '');
+      })
+      .catch(() => void Taro.showToast({ title: '加载补充信息失败', icon: 'none' }));
+  }, []);
+
   function handleRegionChange(nextRegion: RentalRegionInput) {
     setRegion(nextRegion);
   }
 
-  /** 校验必填项并提交房源；成功后同步个人中心发布数量。 */
+  function handlePriceInput(event: InputEvent) {
+    setPrice(event.detail.value);
+  }
+
+  function handleLandmarkInput(event: InputEvent) {
+    setLandmark(event.detail.value);
+  }
+
+  function handleAreaInput(event: InputEvent) {
+    setArea(event.detail.value);
+  }
+
+  function handleCommuteInput(event: InputEvent) {
+    setCommute(event.detail.value);
+  }
+
+  function handleExperienceInput(event: TextareaInputEvent) {
+    setExperience(event.detail.value);
+  }
+
   async function handleSubmit() {
-    if (!price) {
-      void Taro.showToast({ title: '请填写租金', icon: 'none' });
+    if (isSupplementMode) {
+      await handleSupplementSubmit();
       return;
     }
-    if (!region) {
-      void Taro.showToast({ title: '请选择省市区', icon: 'none' });
-      return;
-    }
-    if (roomTypeIndex < 0) {
-      void Taro.showToast({ title: '请选择租房类型', icon: 'none' });
-      return;
-    }
-    if (!experience) {
-      void Taro.showToast({ title: '请填写房源描述', icon: 'none' });
+    await handleCreateSubmit();
+  }
+
+  /** 首次记录只提交真实居住体验，不强制填写费用、区域、空间等参考信息。 */
+  async function handleCreateSubmit() {
+    const validationError = validateShareExperienceDraft({ experience, photos, truthPledge });
+    if (validationError) {
+      void Taro.showToast({ title: validationError, icon: 'none' });
       return;
     }
 
     setSubmitting(true);
     try {
       await createRental({
-        price,
-        location: buildDisplayLocation(region),
-        province: region.province,
-        city: region.city,
-        district: region.district,
-        roomType: ROOM_TYPES[roomTypeIndex],
-        area: area || undefined,
-        experience,
-        tags: selectedTags,
-        wechat: wechat || undefined,
-        photos
+        title: experience.trim().slice(0, 28),
+        location: '待补充',
+        experience: experience.trim(),
+        tags: [],
+        photos,
+        truthPledge
       });
 
-      void Taro.showToast({ title: '发布成功', icon: 'success' });
-      patchProfileStats({
-        publishCount: profileStats.publishCount + 1
-      });
+      void Taro.showToast({ title: '屋檐记已发布', icon: 'success' });
+      patchProfileStats({ publishCount: profileStats.publishCount + 1 });
       setTimeout(() => Taro.navigateBack(), 1500);
     } catch (err) {
-      const msg = err instanceof BizError ? err.message : '发布失败，请稍后重试';
+      const msg = err instanceof BizError ? err.message : '屋檐记发布失败，请稍后再试';
       void Taro.showToast({ title: msg, icon: 'none' });
     } finally {
       setSubmitting(false);
     }
   }
 
+  /** 从我的屋檐记进入后补充费用、区域、空间等参考信息。 */
+  async function handleSupplementSubmit() {
+    const stayStage = stayStageIndex >= 0 ? STAY_STAGES[stayStageIndex].value : undefined;
+    const validationError = validateRentalSupplementDraft({
+      price,
+      region,
+      landmark,
+      roomTypeIndex,
+      stayStage
+    });
+    if (validationError) {
+      void Taro.showToast({ title: validationError, icon: 'none' });
+      return;
+    }
+    if (!rentalId || !region || !stayStage) return;
+
+    setSubmitting(true);
+    try {
+      const regionText = buildDisplayLocation(region);
+      await updateRentalSupplement(rentalId, {
+        price: price.trim(),
+        location: `${regionText} ${landmark.trim()}`.trim(),
+        province: region.province,
+        city: region.city,
+        district: region.district,
+        landmark: landmark.trim(),
+        roomType: ROOM_TYPES[roomTypeIndex],
+        rentalType: RENTAL_TYPES[rentalTypeIndex].value,
+        stayStage,
+        area: area.trim() || undefined,
+        commute: commute.trim() || undefined
+      });
+      void Taro.showToast({ title: '补充成功', icon: 'success' });
+      setTimeout(() => Taro.navigateBack(), 1200);
+    } catch (err) {
+      const msg = err instanceof BizError ? err.message : '补充失败，请稍后再试';
+      void Taro.showToast({ title: msg, icon: 'none' });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const referenceSection = (
+    <FormSection
+      title="参考信息"
+      subtitle={
+        isSupplementMode
+          ? '这些信息会展示在详情页，帮助其他人判断参考价值。'
+          : '落笔后，可在我的屋檐记里补充这部分信息。'
+      }
+    >
+      <View className="share-form-card">
+        <FormRow icon={iconPrice} label="费用">
+          <Text className="share-unit">�</Text>
+          <Input
+            className="share-input"
+            type="digit"
+            placeholder="每月费用"
+            placeholderClass="share-placeholder"
+            value={price}
+            onInput={handlePriceInput}
+          />
+        </FormRow>
+        <FormRowDivider />
+        <FormRow icon={iconLocation} label="城市区域">
+          <RegionField value={region} onChange={handleRegionChange} />
+        </FormRow>
+        <FormRowDivider />
+        <FormRow icon={iconLocation} label="地点地标">
+          <Input
+            className="share-input share-input--flex"
+            placeholder="例如：望京 SOHO 附近"
+            placeholderClass="share-placeholder"
+            value={landmark}
+            onInput={handleLandmarkInput}
+          />
+        </FormRow>
+        <FormRowDivider />
+        <Picker
+          mode="selector"
+          range={ROOM_TYPES}
+          value={roomTypeIndex}
+          onChange={(event) => setRoomTypeIndex(getPickerIndex(event))}
+        >
+          <FormRow icon={iconHouse} label="空间类型" arrow>
+            <Text
+              className={`share-picker-val${roomTypeIndex < 0 ? ' share-picker-val--empty' : ''}`}
+            >
+              {roomTypeIndex >= 0 ? ROOM_TYPES[roomTypeIndex] : '请选择'}
+            </Text>
+          </FormRow>
+        </Picker>
+        <FormRowDivider />
+        <Picker
+          mode="selector"
+          range={RENTAL_TYPES.map((item) => item.label)}
+          value={rentalTypeIndex}
+          onChange={(event) => setRentalTypeIndex(getPickerIndex(event))}
+        >
+          <FormRow icon={iconHouse} label="居住方式" arrow>
+            <Text className="share-picker-val">{RENTAL_TYPES[rentalTypeIndex].label}</Text>
+          </FormRow>
+        </Picker>
+        <FormRowDivider />
+        <Picker
+          mode="selector"
+          range={STAY_STAGES.map((item) => item.label)}
+          value={stayStageIndex}
+          onChange={(event) => setStayStageIndex(getPickerIndex(event))}
+        >
+          <FormRow icon={iconHouse} label="居住阶段" arrow>
+            <Text
+              className={`share-picker-val${stayStageIndex < 0 ? ' share-picker-val--empty' : ''}`}
+            >
+              {stayStageIndex >= 0 ? STAY_STAGES[stayStageIndex].label : '请选择'}
+            </Text>
+          </FormRow>
+        </Picker>
+        <FormRowDivider />
+        <FormRow icon={iconArea} label="面积">
+          <Input
+            className="share-input"
+            type="digit"
+            placeholder="选填"
+            placeholderClass="share-placeholder"
+            value={area}
+            onInput={handleAreaInput}
+          />
+          <Text className="share-unit">㎡</Text>
+        </FormRow>
+        <FormRowDivider />
+        <FormRow icon={iconLocation} label="通勤">
+          <Input
+            className="share-input share-input--flex"
+            placeholder="例如：到 14 号线步行 8 分钟"
+            placeholderClass="share-placeholder"
+            value={commute}
+            onInput={handleCommuteInput}
+          />
+        </FormRow>
+      </View>
+    </FormSection>
+  );
+
   return (
     <PageShell>
       <ScrollView scrollY showScrollbar={false} className="share-scroll">
-        {/* 图片上传区：承载房源照片选择和预览。 */}
-        <FormSection title="房源照片" subtitle="建议上传真实清晰的房间、客厅或周边照片">
-          <PhotoUploader photos={photos} onChange={setPhotos} />
-        </FormSection>
-
-        <FormSection title="基础信息">
-          <View className="share-form-card">
-            <FormRow icon={iconPrice} label="月租">
-              <Text className="share-unit">¥</Text>
-              <Input
-                className="share-input"
-                type="digit"
-                placeholder="请输入租金"
-                placeholderClass="share-placeholder"
-                value={price}
-                onInput={(e) => setPrice(e.detail.value)}
-              />
-            </FormRow>
-            <FormRowDivider />
-            <FormRow icon={iconLocation} label="位置">
-              <RegionField value={region} onChange={handleRegionChange} />
-            </FormRow>
-            <FormRowDivider />
-            <Picker
-              mode="selector"
-              range={ROOM_TYPES}
-              value={roomTypeIndex}
-              onChange={(e) => setRoomTypeIndex(Number(e.detail.value))}
+        {!isSupplementMode && (
+          <>
+            <FormSection
+              title="一方屋檐下"
+              subtitle="写下这处屋檐里的采光、隔音、通勤和相处，帮后来的人判断是否适合自己。"
             >
-              <FormRow icon={iconHouse} label="租房类型" arrow>
-                <Text className={`share-picker-val${roomTypeIndex < 0 ? ' share-picker-val--empty' : ''}`}>
-                  {roomTypeIndex >= 0 ? ROOM_TYPES[roomTypeIndex] : '请选择'}
-                </Text>
-              </FormRow>
-            </Picker>
-            <FormRowDivider />
-            <FormRow icon={iconArea} label="面积">
-              <Input
-                className="share-input"
-                type="digit"
-                placeholder="请输入面积"
+              <Textarea
+                className="share-textarea share-textarea--note"
+                placeholder="可以写通勤、采光、隔音、同住体验、费用、周边生活和你绕过的坑。"
                 placeholderClass="share-placeholder"
-                value={area}
-                onInput={(e) => setArea(e.detail.value)}
+                value={experience}
+                onInput={handleExperienceInput}
+                maxlength={600}
+                autoHeight
+                showConfirmBar={false}
               />
-              <Text className="share-unit">㎡</Text>
-            </FormRow>
-          </View>
-        </FormSection>
+              <Text className="share-text-count">{experience.length}/600</Text>
+            </FormSection>
 
-        <FormSection title="房源描述" subtitle="写清入住时间、室友情况、通勤和看房方式">
-          <Textarea
-            className="share-textarea"
-            placeholder="例如：近地铁，卧室朝南，适合一人居住..."
-            placeholderClass="share-placeholder"
-            value={experience}
-            onInput={(e) => setExperience(e.detail.value)}
-            maxlength={500}
-            showConfirmBar={false}
-          />
-          {/* 快捷标签：补充房源亮点并同步 selectedTags。 */}
-          <TagSelector
-            tags={QUICK_TAGS}
-            selected={selectedTags}
-            onToggle={(tag) =>
-              setSelectedTags((prev) =>
-                prev.includes(tag) ? prev.filter((current) => current !== tag) : [...prev, tag]
-              )
-            }
-          />
-        </FormSection>
+            <FormSection
+              title="照片"
+              subtitle="至少上传 1 张。避免公开门牌号、合同号、手机号等隐私信息。"
+            >
+              <PhotoUploader photos={photos} onChange={setPhotos} />
+            </FormSection>
 
-        <FormSection title="联系方式">
-          <View className="share-form-card">
-            <FormRow icon={iconWechat} label="微信">
-              <Input
-                className="share-input share-input--flex"
-                placeholder="请输入微信号"
-                placeholderClass="share-placeholder"
-                value={wechat}
-                onInput={(e) => setWechat(e.detail.value)}
-              />
-            </FormRow>
-          </View>
-          <View className="share-privacy">
-            <Text className="share-privacy__text">联系方式仅用于租客沟通，请勿填写敏感证件信息。</Text>
-          </View>
-        </FormSection>
+            <View className="share-pledge" onClick={() => setTruthPledge((value) => !value)}>
+              <View
+                className={`share-pledge__box${truthPledge ? ' share-pledge__box--checked' : ''}`}
+              >
+                <Text className="share-pledge__mark">{truthPledge ? '✓' : ''}</Text>
+              </View>
+              <Text className="share-pledge__text">同意并承诺内容来自真实居住体验</Text>
+            </View>
+          </>
+        )}
+
+        {isSupplementMode && referenceSection}
       </ScrollView>
 
-      {/* 固定提交栏：显示提交加载态并触发表单提交。 */}
-      <SubmitBar loading={submitting} onSubmit={handleSubmit} />
+      <SubmitBar
+        text={isSupplementMode ? '保存补充信息' : '写下屋檐记'}
+        loading={submitting}
+        onSubmit={handleSubmit}
+      />
     </PageShell>
   );
 }
