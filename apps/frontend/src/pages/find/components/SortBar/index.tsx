@@ -36,7 +36,7 @@ export function SortBar({ active, onChange }: Props) {
             className={`sort-bar__item${isActive ? ' sort-bar__item--active' : ''}`}
             onClick={() => handleClick(item)}
           >
-            <Text className="sort-bar__text">{item.label}</Text>
+            <Text className={`sort-bar__text${isActive ? ' sort-bar__text--active' : ''}`}>{item.label}</Text>
           </View>
         );
       })}

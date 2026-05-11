@@ -35,6 +35,7 @@ export default function FindPage() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const requestingRef = useRef(false);
 
   useDidShow(() => {
@@ -103,7 +104,10 @@ export default function FindPage() {
     setPriceRange(undefined);
     setRegion(null);
     setSort('default');
+    setShowFilters(false);
   }
+
+  const hasActiveFilters = filter !== 'all' || Boolean(priceRange) || Boolean(region) || sort !== 'default';
 
   return (
     <PageShell
@@ -112,27 +116,54 @@ export default function FindPage() {
       onRefresherRefresh={handleRefresh}
       onScrollToLower={handleScrollToLower}
     >
-      <View className="find-controls">
-        <View className="find-controls__search">
-          <SearchBar value={keyword} onChange={setKeyword} />
+      <View className="find-header">
+        <View className="find-header__copy">
+          <Text className="find-header__title">一方屋檐下</Text>
+          <Text className="find-header__subtitle">翻看城市里的居住冷暖</Text>
         </View>
-        <FilterChips
-          filter={filter}
-          priceRange={priceRange}
-          onFilterChange={setFilter}
-          onPriceRangeChange={setPriceRange}
-        />
-        <RegionFilter value={region} onChange={setRegion} />
+        <View
+          className={`find-header__filter-btn${showFilters ? ' find-header__filter-btn--open' : ''}${
+            hasActiveFilters ? ' find-header__filter-btn--active' : ''
+          }`}
+          onClick={() => setShowFilters((value) => !value)}
+        >
+          <Text className="find-header__filter-text">筛选</Text>
+          {hasActiveFilters && <View className="find-header__filter-dot" />}
+        </View>
       </View>
 
-      <View className="find-sort">
-        <SortBar active={sort} onChange={setSort} />
+      <View className="find-search">
+        <SearchBar value={keyword} onChange={setKeyword} />
       </View>
+
+      {showFilters && (
+        <View className="find-filter-panel">
+          <FilterChips
+            filter={filter}
+            priceRange={priceRange}
+            onFilterChange={setFilter}
+            onPriceRangeChange={setPriceRange}
+          />
+          <View className="find-filter-panel__section">
+            <Text className="find-filter-panel__label">区域</Text>
+            <RegionFilter value={region} onChange={setRegion} />
+          </View>
+          <View className="find-filter-panel__section">
+            <Text className="find-filter-panel__label">排序</Text>
+            <SortBar active={sort} onChange={setSort} />
+          </View>
+          {hasActiveFilters && (
+            <View className="find-filter-panel__reset" onClick={handleReset}>
+              <Text className="find-filter-panel__reset-text">重置筛选</Text>
+            </View>
+          )}
+        </View>
+      )}
 
       <View className="find-list">
         {loading && (
           <View className="find-empty">
-            <Text className="find-empty__text">正在加载屋檐故事...</Text>
+            <Text className="find-empty__text">正在翻找屋檐故事...</Text>
           </View>
         )}
         {!loading && rentals.length === 0 && <EmptyState onReset={handleReset} />}
@@ -143,12 +174,12 @@ export default function FindPage() {
         ))}
         {loadingMore && (
           <View className="find-footer">
-            <Text className="find-footer__text">继续加载屋檐故事...</Text>
+            <Text className="find-footer__text">继续翻找屋檐故事...</Text>
           </View>
         )}
         {!loading && !loadingMore && !hasMore && rentals.length > 0 && (
           <View className="find-footer">
-            <Text className="find-footer__text">已经看完这些屋檐故事了</Text>
+            <Text className="find-footer__text">这些屋檐故事先看到这里</Text>
           </View>
         )}
       </View>

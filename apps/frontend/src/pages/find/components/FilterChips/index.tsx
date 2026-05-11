@@ -31,27 +31,43 @@ interface Props {
 export function FilterChips({ filter, priceRange, onFilterChange, onPriceRangeChange }: Props) {
   return (
     <View className="filter-chips">
-      <View className="filter-chips__row">
-        {FILTERS.map((item) => (
-          <View
-            key={item.value}
-            className={`filter-chips__chip${filter === item.value ? ' filter-chips__chip--active' : ''}`}
-            onClick={() => onFilterChange(item.value)}
-          >
-            <Text className="filter-chips__text">{item.label}</Text>
-          </View>
-        ))}
+      <View className="filter-chips__group">
+        <Text className="filter-chips__title">居住方式</Text>
+        <View className="filter-chips__row">
+          {FILTERS.map((item) => {
+            const active = filter === item.value;
+            return (
+              <View
+                key={item.value}
+                className={`filter-chips__chip${active ? ' filter-chips__chip--active' : ''}`}
+                onClick={() => onFilterChange(item.value)}
+              >
+                <Text className={`filter-chips__text${active ? ' filter-chips__text--active' : ''}`}>
+                  {item.label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
-      <View className="filter-chips__row">
-        {PRICE_FILTERS.map((item) => (
-          <View
-            key={item.value || 'all'}
-            className={`filter-chips__chip${priceRange === item.value ? ' filter-chips__chip--active' : ''}`}
-            onClick={() => onPriceRangeChange(item.value)}
-          >
-            <Text className="filter-chips__text">{item.label}</Text>
-          </View>
-        ))}
+      <View className="filter-chips__group">
+        <Text className="filter-chips__title">费用范围</Text>
+        <View className="filter-chips__row">
+          {PRICE_FILTERS.map((item) => {
+            const active = priceRange === item.value;
+            return (
+              <View
+                key={item.value || 'all'}
+                className={`filter-chips__chip${active ? ' filter-chips__chip--active' : ''}`}
+                onClick={() => onPriceRangeChange(item.value)}
+              >
+                <Text className={`filter-chips__text${active ? ' filter-chips__text--active' : ''}`}>
+                  {item.label}
+                </Text>
+              </View>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
