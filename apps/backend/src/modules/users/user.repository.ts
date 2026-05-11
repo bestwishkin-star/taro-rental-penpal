@@ -1,6 +1,6 @@
+import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 import type { RowDataPacket } from 'mysql2/promise';
 
-import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 
 import { pool } from '@/lib/mysql';
 

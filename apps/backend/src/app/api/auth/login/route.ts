@@ -1,8 +1,8 @@
 import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import { BizCode } from '@shared/errors';
 
-import { loginWithCode } from '@/modules/auth/auth.service';
 import { fail, handleError, ok } from '@/lib/response';
+import { loginWithCode } from '@/modules/auth/auth.service';
 
 /** 登录接口：校验小程序 code 后换取后端 token。 */
 export async function POST(request: Request) {

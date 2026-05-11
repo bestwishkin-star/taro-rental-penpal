@@ -1,8 +1,9 @@
-import { code2Session, findOrCreateUser } from './auth.repository';
 
 import type { LoginResponse } from '@shared/contracts/auth';
 
 import { signToken } from '@/lib/jwt';
+
+import { code2Session, findOrCreateUser } from './auth.repository';
 
 /** 完成微信 code 登录，生成 JWT 并返回前端需要的用户信息。 */
 export async function loginWithCode(code: string): Promise<LoginResponse> {

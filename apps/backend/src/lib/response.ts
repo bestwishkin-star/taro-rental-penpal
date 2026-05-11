@@ -1,9 +1,9 @@
+import type { ApiResponse } from '@shared/contracts/api';
 import { BizCode, BizMessage } from '@shared/errors';
 import { NextResponse } from 'next/server';
 
 import { AppError } from './errors';
 
-import type { ApiResponse } from '@shared/contracts/api';
 
 // 业务码联合类型，限制 fail 只能返回已定义的业务码。
 type BizCodeValue = (typeof BizCode)[keyof typeof BizCode];

@@ -1,6 +1,6 @@
+import type { HealthCheckResponse } from '@shared/contracts/health';
 import { NextResponse } from 'next/server';
 
-import type { HealthCheckResponse } from '@shared/contracts/health';
 
 import { getSystemStatus } from '@/modules/system/system.service';
 

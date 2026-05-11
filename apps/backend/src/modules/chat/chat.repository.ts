@@ -1,6 +1,6 @@
+import type { ConversationPreview } from '@shared/contracts/chat';
 import type { RowDataPacket } from 'mysql2/promise';
 
-import type { ConversationPreview } from '@shared/contracts/chat';
 
 import { pool } from '@/lib/mysql';
 

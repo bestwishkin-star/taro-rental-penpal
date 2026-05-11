@@ -1,5 +1,4 @@
 import { BizCode } from '@shared/errors';
-
 import type { RowDataPacket } from 'mysql2/promise';
 
 import { env } from '@/lib/env';

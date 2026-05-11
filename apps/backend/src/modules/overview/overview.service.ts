@@ -42,6 +42,6 @@ const payload: OverviewPayload = {
   ]
 };
 
-export async function getOverviewPayload() {
+export function getOverviewPayload() {
   return payload;
 }

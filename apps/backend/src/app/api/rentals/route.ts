@@ -1,4 +1,4 @@
-import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
+﻿import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
 
 import { verifyToken } from '@/lib/jwt';
@@ -6,7 +6,7 @@ import { fail, handleError, ok } from '@/lib/response';
 import { buildRentalLocationLabel } from '@/modules/rentals/location-utils';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
 
-/** 房源列表接口：从 URL 查询参数组装筛选条件。 */
+/** 读取租房经历列表，支持关键词、区域、租金和类型筛选。 */
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -21,14 +21,13 @@ export async function GET(request: Request) {
       city: searchParams.get('city') ?? undefined,
       district: searchParams.get('district') ?? undefined
     };
-    const rentals = await readRentals(query);
-    return ok(rentals);
+    return ok(await readRentals(query));
   } catch (error) {
     return handleError(error);
   }
 }
 
-/** 房源发布接口：校验登录态和必填字段后创建房源。 */
+/** 首次发布只要求真实经历，租房参考允许后续补充。 */
 export async function POST(request: Request) {
   try {
     const auth = request.headers.get('authorization') ?? '';
@@ -39,12 +38,11 @@ export async function POST(request: Request) {
     if (!payload) return fail(BizCode.UNAUTHORIZED);
 
     const body = (await request.json()) as CreateRentalInput;
-    const hasCompleteRegion = Boolean(body.province && body.city && body.district);
-
-    if (!body.price) return fail(BizCode.INVALID_PARAMS, '请填写租金');
-    if (!body.roomType) return fail(BizCode.INVALID_PARAMS, '请选择租房类型');
-    if (!body.experience) return fail(BizCode.INVALID_PARAMS, '请填写房源描述');
-    if (!hasCompleteRegion) return fail(BizCode.INVALID_PARAMS, '请选择省市区');
+    const experience = body.experience?.trim();
+    const hasPhoto = Array.isArray(body.photos) && body.photos.length > 0;
+    if (!experience) return fail(BizCode.INVALID_PARAMS, '请填写真实租房经历');
+    if (!hasPhoto) return fail(BizCode.INVALID_PARAMS, '请至少上传 1 张图片');
+    if (!body.truthPledge) return fail(BizCode.INVALID_PARAMS, '请确认内容来自真实租房经历');
 
     const location =
       body.location?.trim() ||
@@ -52,12 +50,14 @@ export async function POST(request: Request) {
         province: body.province,
         city: body.city,
         district: body.district,
-        address: body.address
-      });
-    if (!location) return fail(BizCode.INVALID_PARAMS, '请选择省市区');
+        address: body.landmark || body.address
+      }) ||
+      '待补充';
 
     const result = await publishRental(payload.openid, {
       ...body,
+      title: body.title?.trim() || experience.slice(0, 28),
+      experience,
       location
     });
     return ok(result);
