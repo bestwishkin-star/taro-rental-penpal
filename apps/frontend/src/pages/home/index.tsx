@@ -25,7 +25,7 @@ export default function HomePage() {
         <ActionCard
           icon={iconFind}
           label="翻看屋檐故事"
-          desc="看看其他人的真实体验、避坑提醒和费用参考"
+          desc="看看其他人的真实体验、生活细节和避坑提醒"
           onClick={() => void Taro.switchTab({ url: '/pages/find/index' })}
         />
         <ActionCard

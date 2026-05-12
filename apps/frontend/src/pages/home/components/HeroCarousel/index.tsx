@@ -1,23 +1,37 @@
-import { Swiper, SwiperItem, Text, View } from '@tarojs/components';
+import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components';
 import { useState } from 'react';
+
+import heroDeskNote from '@/assets/images/home/hero-desk-note.png';
+import heroNeighborhood from '@/assets/images/home/hero-neighborhood.png';
+import heroWindowRoom from '@/assets/images/home/hero-window-room.png';
 
 import './index.scss';
 
-const HERO_ITEMS = [
+type HeroItem = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  image: string;
+};
+
+const HERO_ITEMS: HeroItem[] = [
   {
-    title: '一方屋檐下',
-    subtitle: '用真实照片和文字留下居住的冷暖，给后来者一点确定感。',
-    background: '#3f5f64'
+    eyebrow: '真实居住笔记',
+    title: '窗边有光，也有答案',
+    subtitle: '采光、隔音、通勤，把住过才知道的细节留给后来者。',
+    image: heroWindowRoom
   },
   {
-    title: '屋檐里的明暗',
-    subtitle: '通勤、隔音、采光、费用和周边生活，都可以被认真讨论。',
-    background: '#7a5b48'
+    eyebrow: '楼下生活切片',
+    title: '楼下的日常，也算答案',
+    subtitle: '菜场、地铁、夜路和烟火气，都是选择一间房的理由。',
+    image: heroNeighborhood
   },
   {
-    title: '先落笔，再补充',
-    subtitle: '先写下这段屋檐下的生活，之后再补充费用、区域和通勤等参考。',
-    background: '#5f5d7a'
+    eyebrow: '写给后来者',
+    title: '把居住冷暖写成路标',
+    subtitle: '用照片和文字记录真实体验，让下一次选择更有底。',
+    image: heroDeskNote
   }
 ];
 
@@ -37,10 +51,11 @@ export function HeroCarousel() {
         {HERO_ITEMS.map((item) => (
           <SwiperItem key={item.title}>
             <View className="hero-carousel__item-wrapper">
-              <View className="hero-carousel__item" style={{ background: item.background }}>
+              <View className="hero-carousel__item">
+                <Image className="hero-carousel__image" src={item.image} mode="aspectFill" />
                 <View className="hero-carousel__overlay" />
                 <View className="hero-carousel__content">
-                  <Text className="hero-carousel__eyebrow">居住笔友</Text>
+                  <Text className="hero-carousel__eyebrow">{item.eyebrow}</Text>
                   <Text className="hero-carousel__title">{item.title}</Text>
                   <Text className="hero-carousel__subtitle">{item.subtitle}</Text>
                 </View>
@@ -49,14 +64,6 @@ export function HeroCarousel() {
           </SwiperItem>
         ))}
       </Swiper>
-      <View className="hero-carousel__dots">
-        {HERO_ITEMS.map((item, index) => (
-          <View
-            key={item.title}
-            className={`hero-carousel__dot${current === index ? ' hero-carousel__dot--active' : ''}`}
-          />
-        ))}
-      </View>
     </View>
   );
 }
