@@ -1,4 +1,4 @@
-﻿import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
+import type { LoginRequest, LoginResponse } from '@shared/contracts/auth';
 import type { ConversationPreview } from '@shared/contracts/chat';
 import type { OverviewPayload } from '@shared/contracts/overview';
 import type {
@@ -12,8 +12,7 @@ import type {
   RentalDetail,
   RentalListing,
   RentalStatus,
-  UpdateRentalStatusInput,
-  UpdateRentalSupplementInput
+  UpdateRentalStatusInput
 } from '@shared/contracts/rental';
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
 import Taro from '@tarojs/taro';
@@ -47,14 +46,8 @@ export function saveUserProfile(input: UserProfileInput) {
 export function fetchRentals(query?: ListRentalsQuery) {
   const params: Record<string, string> = {};
   if (query?.keyword) params.keyword = query.keyword;
-  if (query?.filter) params.filter = query.filter;
-  if (query?.sort) params.sort = query.sort;
   if (query?.page) params.page = query.page;
   if (query?.pageSize) params.pageSize = query.pageSize;
-  if (query?.priceRange) params.priceRange = query.priceRange;
-  if (query?.province) params.province = query.province;
-  if (query?.city) params.city = query.city;
-  if (query?.district) params.district = query.district;
   return httpRequest<RentalListing[]>('/rentals', Object.keys(params).length ? { params } : {});
 }
 
@@ -62,13 +55,6 @@ export function updateRentalStatus(id: string, status: RentalStatus) {
   return httpRequest<null, UpdateRentalStatusInput>(`/rentals/${id}/status`, {
     method: 'PATCH',
     body: { status }
-  });
-}
-
-export function updateRentalSupplement(id: string, input: UpdateRentalSupplementInput) {
-  return httpRequest<null, UpdateRentalSupplementInput>(`/rentals/${id}`, {
-    method: 'PATCH',
-    body: input
   });
 }
 

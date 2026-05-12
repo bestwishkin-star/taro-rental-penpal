@@ -1,25 +1,26 @@
-﻿import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
+import type { CreateRentalInput, ListRentalsQuery } from '@shared/contracts/rental';
 import { BizCode } from '@shared/errors';
 
 import { verifyToken } from '@/lib/jwt';
 import { fail, handleError, ok } from '@/lib/response';
-import { buildRentalLocationLabel } from '@/modules/rentals/location-utils';
 import { publishRental, readRentals } from '@/modules/rentals/rental.service';
 
-/** 读取租房经历列表，支持关键词、区域、租金和类型筛选。 */
+const EXPERIENCE_REQUIRED_MESSAGE = '\u8bf7\u586b\u5199\u771f\u5b9e\u5c45\u4f4f\u6545\u4e8b';
+const PHOTO_REQUIRED_MESSAGE = '\u8bf7\u81f3\u5c11\u4e0a\u4f20 1 \u5f20\u56fe\u7247';
+const PLEDGE_REQUIRED_MESSAGE = '\u8bf7\u786e\u8ba4\u5185\u5bb9\u6765\u81ea\u771f\u5b9e\u5c45\u4f4f\u4f53\u9a8c';
+
+function normalizePhotos(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0).map((item) => item.trim());
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const query: ListRentalsQuery = {
       keyword: searchParams.get('keyword') ?? undefined,
-      filter: searchParams.get('filter') ?? undefined,
-      sort: searchParams.get('sort') ?? undefined,
       page: searchParams.get('page') ?? undefined,
-      pageSize: searchParams.get('pageSize') ?? undefined,
-      priceRange: (searchParams.get('priceRange') as ListRentalsQuery['priceRange']) ?? undefined,
-      province: searchParams.get('province') ?? undefined,
-      city: searchParams.get('city') ?? undefined,
-      district: searchParams.get('district') ?? undefined
+      pageSize: searchParams.get('pageSize') ?? undefined
     };
     return ok(await readRentals(query));
   } catch (error) {
@@ -27,7 +28,6 @@ export async function GET(request: Request) {
   }
 }
 
-/** 首次发布只要求真实经历，租房参考允许后续补充。 */
 export async function POST(request: Request) {
   try {
     const auth = request.headers.get('authorization') ?? '';
@@ -39,26 +39,19 @@ export async function POST(request: Request) {
 
     const body = (await request.json()) as CreateRentalInput;
     const experience = body.experience?.trim();
-    const hasPhoto = Array.isArray(body.photos) && body.photos.length > 0;
-    if (!experience) return fail(BizCode.INVALID_PARAMS, '请填写真实租房经历');
-    if (!hasPhoto) return fail(BizCode.INVALID_PARAMS, '请至少上传 1 张图片');
-    if (!body.truthPledge) return fail(BizCode.INVALID_PARAMS, '请确认内容来自真实租房经历');
-
-    const location =
-      body.location?.trim() ||
-      buildRentalLocationLabel({
-        province: body.province,
-        city: body.city,
-        district: body.district,
-        address: body.landmark || body.address
-      }) ||
-      '待补充';
+    const photos = normalizePhotos(body.photos);
+    const proofPhotos = normalizePhotos(body.proofPhotos);
+    if (!experience) return fail(BizCode.INVALID_PARAMS, EXPERIENCE_REQUIRED_MESSAGE);
+    if (photos.length === 0) return fail(BizCode.INVALID_PARAMS, PHOTO_REQUIRED_MESSAGE);
+    if (!body.truthPledge) return fail(BizCode.INVALID_PARAMS, PLEDGE_REQUIRED_MESSAGE);
 
     const result = await publishRental(payload.openid, {
-      ...body,
       title: body.title?.trim() || experience.slice(0, 28),
       experience,
-      location
+      photos,
+      proofPhotos,
+      truthPledge: body.truthPledge,
+      wechat: body.wechat?.trim()
     });
     return ok(result);
   } catch (error) {

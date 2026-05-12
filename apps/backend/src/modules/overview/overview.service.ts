@@ -14,10 +14,10 @@ const payload: OverviewPayload = {
       description: 'Collect phone number authorization, profile setup, and onboarding actions.'
     },
     {
-      title: 'Rental Feed',
-      tag: 'Housing',
+      title: 'Story Feed',
+      tag: 'Community',
       route: '/pages/rental/index',
-      description: 'Browse listings, districts, and roommate matching tags in one feed.'
+      description: 'Browse story-first posts with photos, comments, favorites, and reports.'
     },
     {
       title: 'Chat Entry',

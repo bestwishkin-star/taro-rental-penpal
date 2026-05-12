@@ -10,7 +10,7 @@ interface Props {
   onSubmit: () => void;
 }
 
-/** 底部固定提交栏，用于提交屋檐记或补充信息。 */
+/** 底部固定提交栏，用于提交屋檐记。 */
 export function SubmitBar({ text = '提交', loading = false, onSubmit }: Props) {
   return (
     <View className="submit-bar">

@@ -1,4 +1,4 @@
-﻿import type {
+import type {
   CreateRentalInput,
   CreateRentalReportInput,
   FavoriteStatus,
@@ -12,55 +12,32 @@
   RentalReportDetail,
   RentalReportListItem,
   RentalReportReason,
-  RentalStayStage,
   RentalStatus,
-  RentalType,
-  UpdateRentalSupplementInput
 } from '@shared/contracts/rental';
 import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
 
-import {
-  buildRegionDistanceOrderFragment,
-  buildRegionFilterFragments,
-  buildRentalLocationLabel,
-  detectRentalLocationSchema,
-  hasStructuredLocationColumns,
-  type RentalLocationSchema
-} from './location-utils';
+const STORY_FALLBACK_TITLE = '\u5c4b\u6a90\u6545\u4e8b';
+const DEFAULT_COMMENT_AUTHOR = '\u4f4f\u53cb';
 
 interface RentalRow extends RowDataPacket {
   id: string;
   title: string | null;
-  price: string;
-  location: string;
-  province: string | null;
-  city: string | null;
-  district: string | null;
-  address: string | null;
-  landmark: string | null;
-  latitude: number | string | null;
-  longitude: number | string | null;
-  room_type: string;
-  rental_type: string | null;
-  stay_stage: string | null;
-  area: string;
-  commute: string | null;
-  tags: string | null;
   photos: string | null;
   status: number;
   proof_status: string | null;
   post_status: string | null;
   comment_count: number | null;
   favorite_count: number | null;
+  content_preview: string | null;
   created_at: Date | string | null;
 }
 
 interface RentalDetailRow extends RentalRow {
   experience: string;
-  wechat: string;
+  wechat: string | null;
 }
 
 interface RentalCommentRow extends RowDataPacket {
@@ -81,7 +58,7 @@ interface RentalReportRow extends RowDataPacket {
   reason: string;
   status: string;
   created_at: Date | string;
-  description?: string;
+  description?: string | null;
   evidence_photos?: string | null;
   handled_by?: string | null;
   handled_note?: string | null;
@@ -115,18 +92,6 @@ function mapProofStatus(value: string | null): RentalProofStatus {
   return value === 'submitted' ? 'submitted' : 'none';
 }
 
-function mapRentalType(value: string | null): RentalType | undefined {
-  if (value === 'whole' || value === 'shared' || value === 'single' || value === 'sublet' || value === 'short') {
-    return value;
-  }
-  return undefined;
-}
-
-function mapStayStage(value: string | null): RentalStayStage | undefined {
-  if (value === 'living' || value === 'moved_out' || value === 'viewing' || value === 'subletting') return value;
-  return undefined;
-}
-
 function mapReportReason(value: string): RentalReportReason {
   if (
     value === 'fake_rent_or_address' ||
@@ -141,12 +106,6 @@ function mapReportReason(value: string): RentalReportReason {
   return 'other';
 }
 
-function toNumber(value: number | string | null): number | undefined {
-  if (value == null || value === '') return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
 function toIsoString(value: Date | string | null): string | undefined {
   if (!value) return undefined;
   return new Date(value).toISOString();
@@ -155,22 +114,8 @@ function toIsoString(value: Date | string | null): string | undefined {
 function mapRentalRow(row: RentalRow): RentalListing {
   return {
     id: row.id,
-    title: row.title?.trim() || `${row.room_type} / ${row.location}`,
-    location: row.location,
-    province: row.province ?? undefined,
-    city: row.city ?? undefined,
-    district: row.district ?? undefined,
-    address: row.address ?? undefined,
-    landmark: row.landmark ?? undefined,
-    latitude: toNumber(row.latitude),
-    longitude: toNumber(row.longitude),
-    price: row.price,
-    area: row.area,
-    roomType: row.room_type,
-    rentalType: mapRentalType(row.rental_type),
-    stayStage: mapStayStage(row.stay_stage),
-    commute: row.commute ?? undefined,
-    tags: safeParseArray(row.tags),
+    title: row.title?.trim() || row.content_preview?.trim() || STORY_FALLBACK_TITLE,
+    contentPreview: row.content_preview ?? undefined,
     photos: safeParseArray(row.photos),
     status: mapStatus(row.status),
     postStatus: mapPostStatus(row.post_status),
@@ -191,25 +136,11 @@ function columnExpr(columns: Set<string>, column: string, fallback: string, alia
   return columns.has(column) ? `${prefix}${column} AS ${column}` : `${fallback} AS ${column}`;
 }
 
-function buildSelectColumns(schema: RentalLocationSchema, columns: Set<string>, alias = '') {
+function buildSelectColumns(columns: Set<string>, alias = ''): string[] {
   const prefix = alias ? `${alias}.` : '';
-  const selected = [`${prefix}id AS id`, `${prefix}price AS price`, `${prefix}location AS location`];
-
-  if (hasStructuredLocationColumns(schema)) {
-    selected.push(`${prefix}province AS province`, `${prefix}city AS city`, `${prefix}district AS district`);
-  } else {
-    selected.push('NULL AS province', 'NULL AS city', 'NULL AS district');
-  }
-
-  selected.push(schema.address ? `${prefix}address AS address` : 'NULL AS address');
-  selected.push(schema.latitude ? `${prefix}latitude AS latitude` : 'NULL AS latitude');
-  selected.push(schema.longitude ? `${prefix}longitude AS longitude` : 'NULL AS longitude');
-  selected.push(`${prefix}room_type AS room_type`, `${prefix}area AS area`, `${prefix}tags AS tags`, `${prefix}photos AS photos`, `${prefix}status AS status`);
-  selected.push(columnExpr(columns, 'title', "''", alias));
-  selected.push(columnExpr(columns, 'landmark', 'NULL', alias));
-  selected.push(columnExpr(columns, 'rental_type', "'shared'", alias));
-  selected.push(columnExpr(columns, 'stay_stage', "'living'", alias));
-  selected.push(columnExpr(columns, 'commute', "''", alias));
+  const selected = [`${prefix}id AS id`, `${prefix}photos AS photos`, `${prefix}status AS status`];
+  selected.push(`LEFT(${prefix}experience, 120) AS content_preview`);
+  selected.push(columnExpr(columns, 'title', `LEFT(${prefix}experience, 28)`, alias));
   selected.push(columnExpr(columns, 'proof_status', "'none'", alias));
   selected.push(columnExpr(columns, 'post_status', "'active'", alias));
   selected.push(columnExpr(columns, 'comment_count', '0', alias));
@@ -218,8 +149,14 @@ function buildSelectColumns(schema: RentalLocationSchema, columns: Set<string>, 
   return selected;
 }
 
-function pushIfColumn(columns: Set<string>, targetColumns: string[], values: Array<string | number | null>, column: string, value: string | number | null) {
-  if (!columns.has(column)) return;
+function pushIfColumn(
+  existingColumns: Set<string>,
+  targetColumns: string[],
+  values: Array<string | number | null>,
+  column: string,
+  value: string | number | null
+) {
+  if (!existingColumns.has(column)) return;
   targetColumns.push(column);
   values.push(value);
 }
@@ -228,58 +165,37 @@ function buildInsertStatement(
   id: string,
   userOpenid: string,
   input: CreateRentalInput,
-  schema: RentalLocationSchema,
   rentalColumns: Set<string>
 ) {
-  const columns = ['id', 'user_openid', 'price', 'location'];
-  const values: Array<string | number | null> = [
-    id,
-    userOpenid,
-    input.price ?? '',
-    buildRentalLocationLabel({
-      location: input.location ?? '待补充',
-      province: input.province,
-      city: input.city,
-      district: input.district,
-      address: input.landmark ?? input.address
-    })
-  ];
+  const title = input.title?.trim() || input.experience.trim().slice(0, 28) || STORY_FALLBACK_TITLE;
+  const columns = ['id', 'user_openid'];
+  const values: Array<string | number | null> = [id, userOpenid];
 
-  if (hasStructuredLocationColumns(schema)) {
-    columns.push('province', 'city', 'district');
-    values.push(input.province ?? null, input.city ?? null, input.district ?? null);
-  }
-  if (schema.address) {
-    columns.push('address');
-    values.push(input.address ?? null);
-  }
-  if (schema.latitude) {
-    columns.push('latitude');
-    values.push(input.latitude ?? null);
-  }
-  if (schema.longitude) {
-    columns.push('longitude');
-    values.push(input.longitude ?? null);
-  }
-
-  pushIfColumn(rentalColumns, columns, values, 'title', input.title);
-  pushIfColumn(rentalColumns, columns, values, 'landmark', input.landmark ?? input.address ?? null);
-  pushIfColumn(rentalColumns, columns, values, 'rental_type', input.rentalType ?? 'shared');
-  pushIfColumn(rentalColumns, columns, values, 'stay_stage', input.stayStage ?? 'living');
-  pushIfColumn(rentalColumns, columns, values, 'commute', input.commute ?? '');
+  pushIfColumn(rentalColumns, columns, values, 'price', '');
+  pushIfColumn(rentalColumns, columns, values, 'location', STORY_FALLBACK_TITLE);
+  pushIfColumn(rentalColumns, columns, values, 'province', null);
+  pushIfColumn(rentalColumns, columns, values, 'city', null);
+  pushIfColumn(rentalColumns, columns, values, 'district', null);
+  pushIfColumn(rentalColumns, columns, values, 'address', null);
+  pushIfColumn(rentalColumns, columns, values, 'latitude', null);
+  pushIfColumn(rentalColumns, columns, values, 'longitude', null);
+  pushIfColumn(rentalColumns, columns, values, 'title', title);
+  pushIfColumn(rentalColumns, columns, values, 'landmark', null);
+  pushIfColumn(rentalColumns, columns, values, 'rental_type', null);
+  pushIfColumn(rentalColumns, columns, values, 'stay_stage', null);
+  pushIfColumn(rentalColumns, columns, values, 'commute', '');
   pushIfColumn(rentalColumns, columns, values, 'proof_status', input.proofPhotos?.length ? 'submitted' : 'none');
   pushIfColumn(rentalColumns, columns, values, 'post_status', 'active');
+  pushIfColumn(rentalColumns, columns, values, 'room_type', STORY_FALLBACK_TITLE);
+  pushIfColumn(rentalColumns, columns, values, 'area', '');
+  pushIfColumn(rentalColumns, columns, values, 'tags', JSON.stringify([]));
+  pushIfColumn(rentalColumns, columns, values, 'wechat', input.wechat ?? '');
 
-  columns.push('room_type', 'area', 'experience', 'tags', 'wechat', 'photos', 'status', 'created_at', 'updated_at');
-  values.push(
-    input.roomType ?? '待补充',
-    input.area ?? '',
-    input.experience,
-    JSON.stringify(input.tags),
-    input.wechat ?? '',
-    JSON.stringify(input.photos),
-    1
-  );
+  columns.push('experience', 'photos', 'status');
+  values.push(input.experience, JSON.stringify(input.photos), 1);
+
+  if (rentalColumns.has('created_at')) columns.push('created_at');
+  if (rentalColumns.has('updated_at')) columns.push('updated_at');
 
   const placeholders = columns.map((column) => (column === 'created_at' || column === 'updated_at' ? 'NOW()' : '?'));
   return {
@@ -288,16 +204,15 @@ function buildInsertStatement(
   };
 }
 
-async function readSchema() {
-  return detectRentalLocationSchema();
-}
-
 export async function getRentalById(id: string): Promise<RentalDetail | null> {
-  const schema = await readSchema();
   const rentalColumns = await readRentalColumns();
-  const columns = buildSelectColumns(schema, rentalColumns).join(', ');
+  const columns = buildSelectColumns(rentalColumns).join(', ');
+  const wechatColumn = columnExpr(rentalColumns, 'wechat', "''");
+  const postStatusCondition = rentalColumns.has('post_status')
+    ? "AND COALESCE(post_status, 'active') <> 'hidden'"
+    : '';
   const [rows] = await pool.execute<RentalDetailRow[]>(
-    `SELECT ${columns}, experience, wechat FROM rentals WHERE id = ? AND status = 1 AND ${rentalColumns.has('post_status') ? "COALESCE(post_status, 'active') <> 'hidden'" : '1 = 1'}`,
+    `SELECT ${columns}, experience, ${wechatColumn} FROM rentals WHERE id = ? AND status = 1 ${postStatusCondition}`,
     [id]
   );
   if (rows.length === 0) return null;
@@ -305,15 +220,14 @@ export async function getRentalById(id: string): Promise<RentalDetail | null> {
   return {
     ...mapRentalRow(row),
     experience: row.experience,
-    wechat: row.wechat
+    wechat: row.wechat ?? ''
   };
 }
 
 export async function createRental(userOpenid: string, input: CreateRentalInput): Promise<{ id: string }> {
-  const schema = await readSchema();
   const rentalColumns = await readRentalColumns();
   const id = generateId();
-  const { sql, values } = buildInsertStatement(id, userOpenid, input, schema, rentalColumns);
+  const { sql, values } = buildInsertStatement(id, userOpenid, input, rentalColumns);
   await pool.execute(sql, values);
   return { id };
 }
@@ -325,11 +239,8 @@ export async function createRentalProofs(userOpenid: string, rentalId: string, p
 }
 
 export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalListing[]> {
-  const schema = await readSchema();
   const rentalColumns = await readRentalColumns();
-  const columns = buildSelectColumns(schema, rentalColumns).join(', ');
-  const { conditions, params } = buildRegionFilterFragments(query, schema);
-  const order = buildRegionDistanceOrderFragment(query, schema);
+  const columns = buildSelectColumns(rentalColumns).join(', ');
 
   const pageSize = Math.min(50, Math.max(1, parseInt(query.pageSize ?? '10', 10) || 10));
   const page = Math.max(1, parseInt(query.page ?? '1', 10) || 1);
@@ -342,52 +253,30 @@ export async function listRentals(query: ListRentalsQuery = {}): Promise<RentalL
     whereConditions.push("COALESCE(post_status, 'active') = 'active'");
   }
 
-  if (query.keyword) {
+  const keyword = query.keyword?.trim();
+  if (keyword) {
     if (rentalColumns.has('title')) {
-      whereConditions.push('(location LIKE ? OR title LIKE ? OR experience LIKE ?)');
-      whereParams.push(`%${query.keyword}%`, `%${query.keyword}%`, `%${query.keyword}%`);
+      whereConditions.push('(title LIKE ? OR experience LIKE ?)');
+      whereParams.push(`%${keyword}%`, `%${keyword}%`);
     } else {
-      whereConditions.push('(location LIKE ? OR experience LIKE ?)');
-      whereParams.push(`%${query.keyword}%`, `%${query.keyword}%`);
+      whereConditions.push('experience LIKE ?');
+      whereParams.push(`%${keyword}%`);
     }
   }
 
-  if (query.filter === 'whole') {
-    whereConditions.push('room_type = ?');
-    whereParams.push('整租');
-  } else if (query.filter === 'shared') {
-    whereConditions.push('room_type = ?');
-    whereParams.push('合租');
-  } else if (query.filter === 'single') {
-    whereConditions.push('room_type = ?');
-    whereParams.push('单间');
-  } else if (query.filter === 'subway') {
-    whereConditions.push("JSON_SEARCH(tags, 'one', '地铁') IS NOT NULL");
-  }
-
-  if (query.priceRange === 'lt2000') {
-    whereConditions.push('CAST(price AS UNSIGNED) < 2000');
-  } else if (query.priceRange === '2000to4000') {
-    whereConditions.push('CAST(price AS UNSIGNED) BETWEEN 2000 AND 4000');
-  } else if (query.priceRange === 'gt4000') {
-    whereConditions.push('CAST(price AS UNSIGNED) > 4000');
-  }
-
-  whereConditions.push(...conditions);
-  whereParams.push(...params);
-
   const where = whereConditions.join(' AND ');
-  const sql = `SELECT ${columns} FROM rentals WHERE ${where} ORDER BY ${order.clause} LIMIT ${pageSize} OFFSET ${offset}`;
-  const [rows] = await pool.execute<RentalRow[]>(sql, [...whereParams, ...order.params]);
+  const orderColumn = rentalColumns.has('created_at') ? 'created_at' : 'id';
+  const sql = `SELECT ${columns} FROM rentals WHERE ${where} ORDER BY ${orderColumn} DESC LIMIT ${pageSize} OFFSET ${offset}`;
+  const [rows] = await pool.execute<RentalRow[]>(sql, whereParams);
   return rows.map(mapRentalRow);
 }
 
 export async function listMyRentals(userOpenid: string): Promise<RentalListing[]> {
-  const schema = await readSchema();
   const rentalColumns = await readRentalColumns();
-  const columns = buildSelectColumns(schema, rentalColumns).join(', ');
+  const columns = buildSelectColumns(rentalColumns).join(', ');
+  const orderColumn = rentalColumns.has('created_at') ? 'created_at' : 'id';
   const [rows] = await pool.execute<RentalRow[]>(
-    `SELECT ${columns} FROM rentals WHERE user_openid = ? ORDER BY created_at DESC`,
+    `SELECT ${columns} FROM rentals WHERE user_openid = ? ORDER BY ${orderColumn} DESC`,
     [userOpenid]
   );
   return rows.map(mapRentalRow);
@@ -430,9 +319,8 @@ export async function toggleFavorite(userOpenid: string, rentalId: string): Prom
 }
 
 export async function listFavorites(userOpenid: string): Promise<RentalListing[]> {
-  const schema = await readSchema();
   const rentalColumns = await readRentalColumns();
-  const columns = buildSelectColumns(schema, rentalColumns, 'r').join(', ');
+  const columns = buildSelectColumns(rentalColumns, 'r').join(', ');
   const postStatusCondition = rentalColumns.has('post_status') ? "AND COALESCE(r.post_status, 'active') = 'active'" : '';
   const [rows] = await pool.execute<RentalRow[]>(
     `SELECT ${columns}
@@ -458,7 +346,7 @@ export async function listRentalComments(rentalId: string): Promise<RentalCommen
     id: row.id,
     rentalId: row.rental_id,
     authorOpenid: row.user_openid,
-    authorName: row.nickname || '租友',
+    authorName: row.nickname || DEFAULT_COMMENT_AUTHOR,
     authorAvatar: row.avatar_url || '',
     content: row.content,
     createdAt: new Date(row.created_at).toISOString()
@@ -482,7 +370,7 @@ export async function createRentalComment(userOpenid: string, rentalId: string, 
 
 export async function deleteRentalComment(userOpenid: string, commentId: string): Promise<boolean> {
   const [commentRows] = await pool.execute<RowDataPacket[]>(
-    'SELECT rental_id FROM rental_post_comments WHERE id = ? AND user_openid = ? AND status = \'active\'',
+    "SELECT rental_id FROM rental_post_comments WHERE id = ? AND user_openid = ? AND status = 'active'",
     [commentId, userOpenid]
   );
   if (commentRows.length === 0) return false;
@@ -524,8 +412,10 @@ export async function createRentalReport(
 }
 
 export async function listRentalReports(): Promise<RentalReportListItem[]> {
+  const rentalColumns = await readRentalColumns();
+  const titleExpr = rentalColumns.has('title') ? 'r.title' : 'LEFT(r.experience, 28)';
   const [rows] = await pool.execute<RentalReportRow[]>(
-    `SELECT rp.id, rp.rental_id, r.title AS rental_title, rp.reporter_openid, rp.reason, rp.status, rp.created_at
+    `SELECT rp.id, rp.rental_id, ${titleExpr} AS rental_title, rp.reporter_openid, rp.reason, rp.status, rp.created_at
      FROM rental_post_reports rp
      INNER JOIN rentals r ON r.id = rp.rental_id
      ORDER BY rp.created_at DESC
@@ -534,7 +424,7 @@ export async function listRentalReports(): Promise<RentalReportListItem[]> {
   return rows.map((row) => ({
     id: row.id,
     rentalId: row.rental_id,
-    rentalTitle: row.rental_title || '未命名租房经历',
+    rentalTitle: row.rental_title || STORY_FALLBACK_TITLE,
     reporterOpenid: row.reporter_openid,
     reason: mapReportReason(row.reason),
     status: row.status === 'handled' ? 'handled' : 'pending',
@@ -543,8 +433,10 @@ export async function listRentalReports(): Promise<RentalReportListItem[]> {
 }
 
 export async function getRentalReportById(reportId: string): Promise<RentalReportDetail | null> {
+  const rentalColumns = await readRentalColumns();
+  const titleExpr = rentalColumns.has('title') ? 'r.title' : 'LEFT(r.experience, 28)';
   const [rows] = await pool.execute<RentalReportRow[]>(
-    `SELECT rp.id, rp.rental_id, r.title AS rental_title, rp.reporter_openid, rp.reason, rp.status, rp.created_at,
+    `SELECT rp.id, rp.rental_id, ${titleExpr} AS rental_title, rp.reporter_openid, rp.reason, rp.status, rp.created_at,
             rp.description, rp.evidence_photos, rp.handled_by, rp.handled_note, rp.handled_at
      FROM rental_post_reports rp
      INNER JOIN rentals r ON r.id = rp.rental_id
@@ -560,7 +452,7 @@ export async function getRentalReportById(reportId: string): Promise<RentalRepor
   return {
     id: row.id,
     rentalId: row.rental_id,
-    rentalTitle: row.rental_title || '未命名租房经历',
+    rentalTitle: row.rental_title || STORY_FALLBACK_TITLE,
     reporterOpenid: row.reporter_openid,
     reason: mapReportReason(row.reason),
     status: row.status === 'handled' ? 'handled' : 'pending',
@@ -592,83 +484,4 @@ export async function handleRentalReport(
     [adminOpenid, input.handledNote, reportId]
   );
   return true;
-}
-
-
-export async function updateRentalSupplement(
-  id: string,
-  userOpenid: string,
-  input: UpdateRentalSupplementInput
-): Promise<boolean> {
-  const schema = await readSchema();
-  const rentalColumns = await readRentalColumns();
-  const setFragments: string[] = [];
-  const values: Array<string | number | null> = [];
-
-  if (input.price !== undefined) {
-    setFragments.push('price = ?');
-    values.push(input.price);
-  }
-
-  const location =
-    input.location?.trim() ||
-    buildRentalLocationLabel({
-      province: input.province,
-      city: input.city,
-      district: input.district,
-      address: input.landmark
-    });
-  if (location) {
-    setFragments.push('location = ?');
-    values.push(location);
-  }
-
-  if (hasStructuredLocationColumns(schema)) {
-    if (input.province !== undefined) {
-      setFragments.push('province = ?');
-      values.push(input.province ?? null);
-    }
-    if (input.city !== undefined) {
-      setFragments.push('city = ?');
-      values.push(input.city ?? null);
-    }
-    if (input.district !== undefined) {
-      setFragments.push('district = ?');
-      values.push(input.district ?? null);
-    }
-  }
-
-  if (rentalColumns.has('landmark') && input.landmark !== undefined) {
-    setFragments.push('landmark = ?');
-    values.push(input.landmark ?? null);
-  }
-  if (input.roomType !== undefined) {
-    setFragments.push('room_type = ?');
-    values.push(input.roomType);
-  }
-  if (rentalColumns.has('rental_type') && input.rentalType !== undefined) {
-    setFragments.push('rental_type = ?');
-    values.push(input.rentalType);
-  }
-  if (rentalColumns.has('stay_stage') && input.stayStage !== undefined) {
-    setFragments.push('stay_stage = ?');
-    values.push(input.stayStage);
-  }
-  if (input.area !== undefined) {
-    setFragments.push('area = ?');
-    values.push(input.area ?? '');
-  }
-  if (rentalColumns.has('commute') && input.commute !== undefined) {
-    setFragments.push('commute = ?');
-    values.push(input.commute ?? '');
-  }
-
-  if (setFragments.length === 0) return true;
-  setFragments.push('updated_at = NOW()');
-  values.push(id, userOpenid);
-  const [result] = await pool.execute<ResultSetHeader>(
-    `UPDATE rentals SET ${setFragments.join(', ')} WHERE id = ? AND user_openid = ?`,
-    values
-  );
-  return result.affectedRows > 0;
 }

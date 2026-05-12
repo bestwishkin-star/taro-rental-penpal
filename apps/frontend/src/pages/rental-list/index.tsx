@@ -88,12 +88,6 @@ export default function RentalListPage() {
             <RentalCard item={item} onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })} />
             {isMine && (
               <View className="rental-list-page__actions">
-                <View
-                  className="rental-list-page__status-btn"
-                  onClick={() => void Taro.navigateTo({ url: `/pages/share/index?id=${item.id}&mode=supplement` })}
-                >
-                  <Text className="rental-list-page__status-btn-text">补充信息</Text>
-                </View>
                 <View className="rental-list-page__status-btn" onClick={() => void handleToggleStatus(item.id, item.status)}>
                   <Text className="rental-list-page__status-btn-text">{item.status === 'active' ? '隐藏' : '重新展示'}</Text>
                 </View>
