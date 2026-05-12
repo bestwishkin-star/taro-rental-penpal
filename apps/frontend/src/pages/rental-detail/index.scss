@@ -1,10 +1,10 @@
-﻿.detail-page {
+.detail-page {
   min-height: 100vh;
   background: #f7f3ec;
 }
 
 .detail-scroll {
-  height: calc(100vh - 112px);
+  height: calc(100vh - 84px);
 }
 
 .detail-loading {
@@ -17,132 +17,115 @@
 
 .detail-loading__text {
   color: #8b7761;
-  font-size: 28px;
+  font-size: 15px;
 }
 
-.detail-gallery {
+.detail-hero {
   width: 100%;
-  height: 520px;
+  height: 320px;
   background: #eadfce;
 }
 
-.detail-gallery__swiper,
-.detail-gallery__img,
-.detail-gallery__placeholder {
+.detail-hero__swiper,
+.detail-hero__img,
+.detail-hero__placeholder {
   width: 100%;
-  height: 520px;
+  height: 320px;
 }
 
-.detail-gallery__placeholder {
-  background: linear-gradient(135deg, #eadfce, #f8f0e4);
+.detail-hero__img {
+  display: block;
+}
+
+.detail-hero__placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top right, rgba(240, 200, 130, 0.34), transparent 42%),
+    linear-gradient(135deg, #eadfce, #f8f0e4);
+}
+
+.detail-hero__placeholder-text {
+  color: #8b7761;
+  font-size: 15px;
+  font-weight: 700;
 }
 
 .detail-content {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  padding: 22px 22px 140px;
+  gap: 14px;
+  padding: 16px 16px 112px;
 }
 
-.detail-card {
-  padding: 24px;
-  border-radius: 8px;
-  background: #fffaf2;
-  border: 1px solid rgba(139, 119, 97, 0.14);
+.detail-story,
+.comment-section {
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(109, 84, 48, 0.1);
+  box-shadow: 0 10px 24px rgba(45, 36, 27, 0.06);
 }
 
-.detail-card--main {
-  margin-top: -54px;
+.detail-story {
+  padding: 18px 16px 20px;
+}
+
+.detail-story__top {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.detail-eyebrow {
+  color: #8a6b3c;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
 }
 
 .detail-title {
   display: block;
   color: #2d241b;
-  font-size: 38px;
+  font-size: 24px;
   font-weight: 800;
-  line-height: 1.35;
+  line-height: 1.32;
 }
 
 .detail-meta {
   display: block;
-  margin-top: 12px;
+  margin-top: 9px;
   color: #8b7761;
-  font-size: 24px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .detail-proof {
-  align-self: flex-start;
-  margin-top: 18px;
-  padding: 8px 14px;
-  border-radius: 6px;
+  flex-shrink: 0;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
   background: #e8f3ed;
+  display: flex;
+  align-items: center;
 }
 
 .detail-proof__text {
   color: #2d6a4f;
-  font-size: 23px;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .detail-experience {
   display: block;
-  margin-top: 22px;
+  margin-top: 16px;
   color: #3b3026;
-  font-size: 29px;
-  line-height: 1.7;
+  font-size: 15px;
+  line-height: 1.78;
   white-space: pre-wrap;
-}
-
-.detail-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 22px;
-}
-
-.detail-tag {
-  padding: 7px 12px;
-  border-radius: 6px;
-  background: #f1e7d8;
-}
-
-.detail-tag__text {
-  color: #5f4f40;
-  font-size: 23px;
-}
-
-.detail-card__title {
-  display: block;
-  margin-bottom: 8px;
-  color: #2d241b;
-  font-size: 30px;
-  font-weight: 700;
-}
-
-.detail-info-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 16px 0;
-}
-
-.detail-info-row__label {
-  flex: 0 0 150px;
-  color: #8b7761;
-  font-size: 25px;
-}
-
-.detail-info-row__value {
-  flex: 1;
-  color: #2d241b;
-  font-size: 26px;
-  line-height: 1.45;
-  text-align: right;
-}
-
-.detail-divider {
-  height: 1px;
-  background: rgba(139, 119, 97, 0.16);
 }
 
 .detail-bottom {
@@ -152,10 +135,10 @@
   left: 0;
   z-index: 10;
   display: flex;
-  gap: 16px;
-  padding: 18px 22px 28px;
+  gap: 10px;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
   background: rgba(255, 250, 242, 0.96);
-  border-top: 1px solid rgba(139, 119, 97, 0.16);
+  border-top: 1px solid rgba(139, 119, 97, 0.14);
 }
 
 .detail-fav-btn,
@@ -163,8 +146,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 78px;
-  border-radius: 8px;
+  height: 48px;
+  border-radius: 999px;
 }
 
 .detail-fav-btn {
@@ -173,18 +156,18 @@
 }
 
 .detail-report-btn {
-  width: 180px;
+  width: 96px;
   background: #f1e7d8;
 }
 
 .detail-fav-btn__text {
   color: #fff;
-  font-size: 28px;
+  font-size: 15px;
   font-weight: 700;
 }
 
 .detail-report-btn__text {
   color: #5f4f40;
-  font-size: 28px;
+  font-size: 15px;
   font-weight: 700;
 }

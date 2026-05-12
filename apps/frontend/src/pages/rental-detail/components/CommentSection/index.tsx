@@ -11,7 +11,7 @@ interface Props {
   rentalId: string;
 }
 
-/** 屋檐故事公开评论区，用于追问细节和补充体验。 */
+/** 屋檐故事公开评论区，用于追问细节和交流体验。 */
 export function CommentSection({ rentalId }: Props) {
   const [comments, setComments] = useState<RentalComment[]>([]);
   const [content, setContent] = useState('');
@@ -57,7 +57,7 @@ export function CommentSection({ rentalId }: Props) {
         <Input
           className="comment-section__input"
           value={content}
-          placeholder="追问细节，或补充你的居住经验"
+          placeholder="追问细节，或留下你的居住经验"
           onInput={(event) => setContent(event.detail.value)}
         />
         <Button className="comment-section__button" loading={submitting} onClick={handleSubmit}>

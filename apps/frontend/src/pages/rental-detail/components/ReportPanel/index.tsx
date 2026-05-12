@@ -8,7 +8,7 @@ import { createRentalReport } from '@/shared/api/services';
 import './index.scss';
 
 const REASON_OPTIONS: Array<{ label: string; value: RentalReportReason }> = [
-  { label: '费用或地点不实', value: 'fake_rent_or_address' },
+  { label: '地点或细节不实', value: 'fake_rent_or_address' },
   { label: '冒充真实体验', value: 'fake_experience' },
   { label: '商业推广伪装', value: 'agent_disguise' },
   { label: '诱导引流', value: 'phishing' },

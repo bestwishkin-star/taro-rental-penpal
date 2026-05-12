@@ -1,4 +1,4 @@
-import type { RentalDetail, RentalStayStage, RentalType } from '@shared/contracts/rental';
+import type { RentalDetail } from '@shared/contracts/rental';
 import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useEffect, useState } from 'react';
@@ -11,21 +11,6 @@ import { CommentSection } from './components/CommentSection';
 import { ReportPanel } from './components/ReportPanel';
 
 import './index.scss';
-
-const RENTAL_TYPE_LABELS: Record<RentalType, string> = {
-  whole: '独住',
-  shared: '同住',
-  single: '单间',
-  sublet: '转住',
-  short: '短住'
-};
-
-const STAY_STAGE_LABELS: Record<RentalStayStage, string> = {
-  living: '正在体验',
-  moved_out: '已经离开',
-  viewing: '看过没住',
-  subletting: '转给别人'
-};
 
 function normalizePhotoUrl(url: string): string {
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
@@ -42,7 +27,7 @@ function formatDate(value?: string): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-/** 屋檐故事详情页，展示照片、正文、参考信息、评论和举报入口。 */
+/** 屋檐故事详情页，展示照片、正文、评论和举报入口。 */
 export default function RentalDetailPage() {
   const [rental, setRental] = useState<RentalDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,114 +96,47 @@ export default function RentalDetailPage() {
   }
 
   const photos = rental.photos.map(normalizePhotoUrl);
-  const regionText = [rental.city, rental.district].filter(Boolean).join(' ') || rental.location;
-  const landmarkText = rental.landmark || rental.address || rental.location;
   const proofSubmitted = rental.proofStatus === 'submitted';
-  const priceText = rental.price ? `¥${rental.price}/月` : '待补充';
+  const createdAtText = formatDate(rental.createdAt);
 
   return (
     <View className="detail-page">
       <ScrollView scrollY showScrollbar={false} className="detail-scroll">
-        <View className="detail-gallery">
+        <View className="detail-hero">
           {photos.length > 0 ? (
             <Swiper
-              className="detail-gallery__swiper"
+              className="detail-hero__swiper"
               indicatorDots={photos.length > 1}
-              indicatorColor="#ffffff80"
-              indicatorActiveColor="#ffffff"
+              indicatorColor="rgba(255, 250, 242, 0.45)"
+              indicatorActiveColor="#fffaf2"
               circular
             >
               {photos.map((url, i) => (
                 <SwiperItem key={i}>
-                  <Image src={url} className="detail-gallery__img" mode="aspectFill" />
+                  <Image src={url} className="detail-hero__img" mode="aspectFill" />
                 </SwiperItem>
               ))}
             </Swiper>
           ) : (
-            <View className="detail-gallery__placeholder" />
+            <View className="detail-hero__placeholder">
+              <Text className="detail-hero__placeholder-text">屋檐故事</Text>
+            </View>
           )}
         </View>
 
         <View className="detail-content">
-          <View className="detail-card detail-card--main">
+          <View className="detail-story">
+            <View className="detail-story__top">
+              <Text className="detail-eyebrow">屋檐故事</Text>
+              {proofSubmitted && (
+                <View className="detail-proof">
+                  <Text className="detail-proof__text">已提交凭证</Text>
+                </View>
+              )}
+            </View>
             <Text className="detail-title">{rental.title}</Text>
-            <Text className="detail-meta">
-              {regionText} · {formatDate(rental.createdAt)}
-            </Text>
-            {proofSubmitted && (
-              <View className="detail-proof">
-                <Text className="detail-proof__text">已提交凭证，仅供平台复核</Text>
-              </View>
-            )}
+            {createdAtText && <Text className="detail-meta">{createdAtText}</Text>}
             <Text className="detail-experience">{rental.experience}</Text>
-            {rental.tags.length > 0 && (
-              <View className="detail-tags">
-                {rental.tags.map((tag) => (
-                  <View key={tag} className="detail-tag">
-                    <Text className="detail-tag__text">{tag}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </View>
-
-          <View className="detail-card">
-            <Text className="detail-card__title">参考信息</Text>
-            <View className="detail-info-row">
-              <Text className="detail-info-row__label">区域</Text>
-              <Text className="detail-info-row__value">{regionText}</Text>
-            </View>
-            <View className="detail-divider" />
-            <View className="detail-info-row">
-              <Text className="detail-info-row__label">地点/地标</Text>
-              <Text className="detail-info-row__value">{landmarkText}</Text>
-            </View>
-            <View className="detail-divider" />
-            <View className="detail-info-row">
-              <Text className="detail-info-row__label">费用</Text>
-              <Text className="detail-info-row__value">{priceText}</Text>
-            </View>
-            <View className="detail-divider" />
-            <View className="detail-info-row">
-              <Text className="detail-info-row__label">空间类型</Text>
-              <Text className="detail-info-row__value">{rental.roomType}</Text>
-            </View>
-            {rental.rentalType && (
-              <>
-                <View className="detail-divider" />
-                <View className="detail-info-row">
-                  <Text className="detail-info-row__label">居住方式</Text>
-                  <Text className="detail-info-row__value">{RENTAL_TYPE_LABELS[rental.rentalType]}</Text>
-                </View>
-              </>
-            )}
-            {rental.stayStage && (
-              <>
-                <View className="detail-divider" />
-                <View className="detail-info-row">
-                  <Text className="detail-info-row__label">居住阶段</Text>
-                  <Text className="detail-info-row__value">{STAY_STAGE_LABELS[rental.stayStage]}</Text>
-                </View>
-              </>
-            )}
-            {rental.area && (
-              <>
-                <View className="detail-divider" />
-                <View className="detail-info-row">
-                  <Text className="detail-info-row__label">面积</Text>
-                  <Text className="detail-info-row__value">{rental.area}㎡</Text>
-                </View>
-              </>
-            )}
-            {rental.commute && (
-              <>
-                <View className="detail-divider" />
-                <View className="detail-info-row">
-                  <Text className="detail-info-row__label">通勤</Text>
-                  <Text className="detail-info-row__value">{rental.commute}</Text>
-                </View>
-              </>
-            )}
           </View>
 
           <CommentSection rentalId={rental.id} />
