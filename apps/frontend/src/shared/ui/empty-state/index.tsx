@@ -13,7 +13,7 @@ export default function EmptyState({ message = '暂无符合条件的屋檐故�
       <Text className="empty-state__message">{message}</Text>
       {onReset && (
         <View className="empty-state__btn" onClick={onReset}>
-          <Text>重置筛选</Text>
+          <Text>清空搜索</Text>
         </View>
       )}
     </View>

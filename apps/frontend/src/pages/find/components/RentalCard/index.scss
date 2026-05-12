@@ -1,18 +1,19 @@
 .rental-card {
   overflow: hidden;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid rgba(109, 84, 48, 0.12);
+  box-shadow: 0 10px 24px rgba(45, 36, 27, 0.06);
 }
 
 .rental-card__cover {
   position: relative;
-  min-height: 168px;
+  height: 176px;
   background: #eadfce;
 }
 
 .rental-card__cover--placeholder {
-  min-height: 132px;
+  height: 132px;
   background:
     radial-gradient(circle at top right, rgba(240, 200, 130, 0.36), transparent 38%),
     linear-gradient(135deg, #eadfce 0%, #f8f0e4 100%);
@@ -24,7 +25,7 @@
 
 .rental-card__img {
   width: 100%;
-  height: 168px;
+  height: 176px;
   display: block;
 }
 
@@ -38,52 +39,14 @@
   padding: 14px 14px 15px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-}
-
-.rental-card__title {
-  color: #2d241b;
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.35;
-}
-
-.rental-card__meta-line {
-  color: #8a7664;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.45;
+  gap: 9px;
 }
 
 .rental-card__desc {
-  color: #5f5145;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1.6;
-}
-
-.rental-card__tags {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 2px;
-}
-
-.rental-card__tag {
-  min-height: 26px;
-  padding: 0 9px;
-  border-radius: 999px;
-  background: #f3eadf;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
-.rental-card__tag-text {
-  color: #6a5747;
-  font-size: 12px;
+  color: #2d241b;
+  font-size: 15px;
   font-weight: 500;
+  line-height: 1.65;
 }
 
 .rental-card__footer {

@@ -1,4 +1,3 @@
-import type { RentalRegionInput } from '@shared/contracts/location';
 import type { ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
@@ -9,13 +8,8 @@ import EmptyState from '@/shared/ui/empty-state';
 import { PageShell } from '@/shared/ui/page-shell';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
-import type { FilterValue, PriceRange } from './components/FilterChips';
-import { FilterChips } from './components/FilterChips';
-import { RegionFilter } from './components/RegionFilter';
 import { RentalCard } from './components/RentalCard';
 import { SearchBar } from './components/SearchBar';
-import { SortBar } from './components/SortBar';
-import type { SortValue } from './components/SortBar';
 
 import './index.scss';
 
@@ -25,17 +19,12 @@ const PAGE_SIZE = 10;
 export default function FindPage() {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
-  const [filter, setFilter] = useState<FilterValue>('all');
-  const [priceRange, setPriceRange] = useState<PriceRange>(undefined);
-  const [region, setRegion] = useState<RentalRegionInput | null>(null);
-  const [sort, setSort] = useState<SortValue>('default');
   const [rentals, setRentals] = useState<RentalListing[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
   const requestingRef = useRef(false);
 
   useDidShow(() => {
@@ -57,14 +46,8 @@ export default function FindPage() {
       try {
         const query: ListRentalsQuery = {
           keyword: debouncedKeyword || undefined,
-          filter: filter === 'all' ? undefined : filter,
-          sort: sort === 'default' ? undefined : sort,
           page: String(pageNum),
-          pageSize: String(PAGE_SIZE),
-          priceRange,
-          province: region?.province,
-          city: region?.city,
-          district: region?.district
+          pageSize: String(PAGE_SIZE)
         };
         const data = await fetchRentals(query);
         setRentals((prev) => (append ? [...prev, ...data] : data));
@@ -79,7 +62,7 @@ export default function FindPage() {
         requestingRef.current = false;
       }
     },
-    [debouncedKeyword, filter, priceRange, region, sort]
+    [debouncedKeyword]
   );
 
   useEffect(() => {
@@ -100,14 +83,7 @@ export default function FindPage() {
 
   function handleReset() {
     setKeyword('');
-    setFilter('all');
-    setPriceRange(undefined);
-    setRegion(null);
-    setSort('default');
-    setShowFilters(false);
   }
-
-  const hasActiveFilters = filter !== 'all' || Boolean(priceRange) || Boolean(region) || sort !== 'default';
 
   return (
     <PageShell
@@ -119,46 +95,13 @@ export default function FindPage() {
       <View className="find-header">
         <View className="find-header__copy">
           <Text className="find-header__title">一方屋檐下</Text>
-          <Text className="find-header__subtitle">翻看城市里的居住冷暖</Text>
-        </View>
-        <View
-          className={`find-header__filter-btn${showFilters ? ' find-header__filter-btn--open' : ''}${
-            hasActiveFilters ? ' find-header__filter-btn--active' : ''
-          }`}
-          onClick={() => setShowFilters((value) => !value)}
-        >
-          <Text className="find-header__filter-text">筛选</Text>
-          {hasActiveFilters && <View className="find-header__filter-dot" />}
+          <Text className="find-header__subtitle">翻看住过的人留下的照片和故事</Text>
         </View>
       </View>
 
       <View className="find-search">
         <SearchBar value={keyword} onChange={setKeyword} />
       </View>
-
-      {showFilters && (
-        <View className="find-filter-panel">
-          <FilterChips
-            filter={filter}
-            priceRange={priceRange}
-            onFilterChange={setFilter}
-            onPriceRangeChange={setPriceRange}
-          />
-          <View className="find-filter-panel__section">
-            <Text className="find-filter-panel__label">区域</Text>
-            <RegionFilter value={region} onChange={setRegion} />
-          </View>
-          <View className="find-filter-panel__section">
-            <Text className="find-filter-panel__label">排序</Text>
-            <SortBar active={sort} onChange={setSort} />
-          </View>
-          {hasActiveFilters && (
-            <View className="find-filter-panel__reset" onClick={handleReset}>
-              <Text className="find-filter-panel__reset-text">重置筛选</Text>
-            </View>
-          )}
-        </View>
-      )}
 
       <View className="find-list">
         {loading && (
