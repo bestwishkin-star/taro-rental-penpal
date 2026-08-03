@@ -3,10 +3,15 @@ export default defineAppConfig({
     'pages/home/index',
     'pages/find/index',
     'pages/profile/index',
-    'pages/share/index',
     'pages/rental-detail/index',
     'pages/rental-list/index',
     'pages/settings/index'
+  ],
+  subPackages: [
+    {
+      root: 'pages/share',
+      pages: ['index']
+    }
   ],
   window: {
     backgroundTextStyle: 'light',
