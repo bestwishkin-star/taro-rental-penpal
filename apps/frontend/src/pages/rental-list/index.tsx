@@ -1,5 +1,5 @@
 import type { RentalListing, RentalStatus } from '@shared/contracts/rental';
-import { Text, View } from '@tarojs/components';
+import { ScrollView, Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useEffect, useRef, useState } from 'react';
 
@@ -66,7 +66,7 @@ export default function RentalListPage() {
   const isMine = typeRef.current === 'mine';
 
   return (
-    <View className="rental-list-page">
+    <ScrollView scrollY showScrollbar={false} className="rental-list-page">
       {loading && (
         <View className="rental-list-page__empty">
           <Text className="rental-list-page__empty-text">正在加载...</Text>
@@ -96,6 +96,6 @@ export default function RentalListPage() {
           </View>
         </View>
       ))}
-    </View>
+    </ScrollView>
   );
 }

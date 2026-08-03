@@ -21,6 +21,18 @@
   height: 100%;
 }
 
+.page-shell--native {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
+.page-shell__scroll--native {
+  height: auto;
+  min-height: 100vh;
+  overflow: visible;
+}
+
 .page-shell__scroll--static {
   overflow: hidden;
 }

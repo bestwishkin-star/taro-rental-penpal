@@ -5,6 +5,7 @@ import './page-shell.scss';
 
 interface PageShellProps extends PropsWithChildren {
   contentClassName?: string;
+  scrollMode?: 'container' | 'native' | 'static';
   refresherEnabled?: boolean;
   refresherTriggered?: boolean;
   onRefresherRefresh?: () => void;
@@ -16,6 +17,7 @@ interface PageShellProps extends PropsWithChildren {
 export function PageShell({
   children,
   contentClassName,
+  scrollMode,
   refresherEnabled,
   refresherTriggered,
   onRefresherRefresh,
@@ -23,13 +25,35 @@ export function PageShell({
   lowerThreshold = 100,
   scrollEnabled = true
 }: PageShellProps) {
-  const contentClasses = ['page-shell__content', !scrollEnabled ? 'page-shell__content--static' : '', contentClassName]
+  const resolvedScrollMode = scrollMode ?? (scrollEnabled ? 'container' : 'static');
+  const rootClasses = [
+    'page-shell',
+    resolvedScrollMode === 'native' ? 'page-shell--native' : '',
+    resolvedScrollMode === 'static' ? 'page-shell--static' : ''
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const contentClasses = [
+    'page-shell__content',
+    resolvedScrollMode === 'static' ? 'page-shell__content--static' : '',
+    contentClassName
+  ]
     .filter(Boolean)
     .join(' ');
 
-  if (!scrollEnabled) {
+  if (resolvedScrollMode === 'native') {
     return (
-      <View className="page-shell">
+      <View className={rootClasses}>
+        <View className="page-shell__scroll page-shell__scroll--native">
+          <View className={contentClasses}>{children}</View>
+        </View>
+      </View>
+    );
+  }
+
+  if (resolvedScrollMode === 'static') {
+    return (
+      <View className={rootClasses}>
         <View className="page-shell__scroll page-shell__scroll--static">
           <View className={contentClasses}>{children}</View>
         </View>
@@ -38,7 +62,7 @@ export function PageShell({
   }
 
   return (
-    <View className="page-shell">
+    <View className={rootClasses}>
       <ScrollView
         scrollY
         showScrollbar={false}
