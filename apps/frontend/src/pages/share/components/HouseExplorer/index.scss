@@ -1,0 +1,122 @@
+.house-explorer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.house-explorer__stage {
+  position: relative;
+  height: 344px;
+  overflow: hidden;
+  border: 1px solid rgba(66, 75, 70, 0.14);
+  border-radius: 8px;
+  background: #eef1ed;
+}
+
+.house-explorer__canvas {
+  display: block;
+  width: 100%;
+  height: 344px;
+}
+
+.house-explorer__toolbar {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.house-explorer__progress {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 7px 10px;
+  border: 1px solid rgba(58, 69, 64, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.house-explorer__progress-label {
+  color: #66716b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.house-explorer__progress-value {
+  color: #9a6030;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.house-explorer__zoom-controls {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(58, 69, 64, 0.14);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.house-explorer__zoom-button {
+  display: flex;
+  width: 38px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+}
+
+.house-explorer__zoom-button--pressed {
+  background: rgba(45, 106, 79, 0.12);
+}
+
+.house-explorer__zoom-divider {
+  width: 1px;
+  height: 20px;
+  margin: 8px 0;
+  background: rgba(58, 69, 64, 0.14);
+}
+
+.house-explorer__zoom-icon {
+  color: #34433c;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.house-explorer__loading {
+  display: flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 9px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.72);
+  pointer-events: none;
+}
+
+.house-explorer__loading-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #cf7e3b;
+  animation: house-explorer-loading 1.1s ease-in-out infinite;
+}
+
+.house-explorer__loading-text {
+  color: #66716b;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+@keyframes house-explorer-loading {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.8);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
