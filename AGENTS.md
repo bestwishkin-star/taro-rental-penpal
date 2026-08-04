@@ -1,0 +1,195 @@
+# Taro Rental Penpal V2 项目指南
+
+## 项目概述
+
+租房笔友小程序 v2 - pnpm monorepo 架构，前后端分离
+
+**技术栈**:
+- 前端: Taro v4 + React + TypeScript (微信小程序)
+- 后端: Next.js 15 App Router + MySQL + TypeScript
+- 包管理: pnpm workspace
+
+## 目录结构
+
+```
+taro-rental-penpal-v2/
+├── apps/
+│   ├── backend/              # Next.js 后端
+│   │   ├── src/app/api/     # API 路由
+│   │   ├── src/lib/         # 工具库 (MongoDB, env)
+│   │   └── src/modules/     # 业务模块 (chat, rentals, users)
+│   └── frontend/             # Taro 小程序
+│       ├── config/          # Taro 配置
+│       ├── src/pages/       # 页面 (home, find, profile, share)
+│       └── src/shared/      # 共享代码 (api, hooks, store, ui)
+├── packages/
+│   └── shared/              # 前后端共享类型和 API contracts
+└── pnpm-workspace.yaml
+```
+
+## 常用命令
+
+```bash
+pnpm install              # 安装依赖
+pnpm dev:frontend         # 开发前端 (微信小程序)
+pnpm dev:backend          # 开发后端
+pnpm lint                 # 代码检查
+pnpm typecheck            # 类型检查
+```
+
+## 开发规范
+
+### 路径别名
+- `@shared/*` → `packages/shared/src/*`
+- `@/*` → `apps/frontend/src/*` (前端)
+
+### 架构模式
+- **后端**: API 路由 → Service → Repository → MongoDB
+- **前端**: 页面 → API Service → HTTP 封装 → 后端 API
+- **共享**: 统一的 `ApiResponse<T>` 响应格式
+
+### 新增功能
+1. **后端 API**: 在 `packages/shared/src/contracts/` 定义类型 → 在 `modules/` 创建 service/repository → 在 `app/api/` 创建路由
+2. **前端页面**: 在 `pages/` 创建目录 (tsx + config + scss) → 在 `app.config.ts` 注册路由
+3. **共享类型**: 在 `packages/shared/src/contracts/` 添加 → 在 `index.ts` 导出
+
+## 环境变量
+
+**后端** (`.env.local`):
+- `MYSQL_HOST`: MySQL 主机地址
+- `MYSQL_PORT`: MySQL 端口
+- `MYSQL_USER`: 数据库用户名
+- `MYSQL_PASSWORD`: 数据库密码
+- `MYSQL_DB`: 数据库名称
+
+**前端** (`src/shared/config/env.ts`):
+- `apiBaseUrl`: 后端 API 地址
+
+### 前端状态管理
+
+使用 **Zustand** 进行全局状态管理（React 项目，非 Vue，不用 Pinia）。
+
+**目录结构**：
+```
+shared/store/
+├── auth-store.ts      # 登录/用户状态
+├── taro-storage.ts    # Taro 存储适配器（替代 localStorage）
+└── index.ts           # 统一导出
+```
+
+**规范**：
+- 每个业务域一个 store 文件（如 `auth-store.ts`、`rental-store.ts`）
+- 用 `persist` + `createJSONStorage(() => taroStorage)` 实现持久化
+- `partialize` 只持久化需要的字段，actions 不需要持久化
+- 页面级临时状态（表单填写等）用 `useState`，不放 store
+- 从 `@/shared/store` 统一导入，不直接引用具体 store 文件
+
+```ts
+import { useAuthStore } from '@/shared/store';
+
+const { isLoggedIn, profile, handleLogout } = useAuthStore();
+```
+
+### 前端组件原子化规范
+
+页面组件必须按业务拆分，禁止将整个页面写在一个组件文件里。
+
+**目录结构**：
+
+```
+pages/<page>/
+├── components/          # 该页面专属业务组件
+│   └── <ComponentName>/
+│       ├── index.tsx
+│       └── index.scss
+├── assets/              # 该页面专属静态资源
+│   └── icons/
+├── index.tsx            # 页面入口，只负责状态管理和组合组件
+├── index.config.ts
+└── index.scss           # 只放页面级样式（覆盖、布局容器等）
+
+shared/ui/               # 跨页面公共组件（PageShell、LoginModal 等）
+shared/assets/           # 跨页面公共静态资源
+```
+
+**拆分原则**：
+- `index.tsx` 只做：状态管理、数据获取、组件组合，不写 UI 细节
+- 每个业务模块提取为独立组件（如 `PhotoUploader`、`FormSection`、`FormRow`）
+- 组件有自己的 SCSS 文件，使用组件名作为 CSS 类名前缀（BEM）
+- 页面专属资源放 `pages/<page>/assets/`，公共资源放 `shared/assets/`
+- 可复用的组件（跨页面使用）放 `shared/ui/`
+
+### 图标与图片资源
+
+**禁止**使用字体图标（如 lucide、feather、iconfont）或 emoji 作为 UI 图标。
+
+**必须**从 Pencil 设计稿直接切图使用：
+
+1. 在 Pencil 中选中目标图标/图片节点，使用 `mcp__pencil__export_nodes` 导出
+2. 导出参数：`scale: 2`（2倍图）、`format: "png"`
+3. 输出目录：`apps/frontend/src/assets/icons/<页面名>/`
+4. 文件命名：语义化英文，如 `icon-price.png`、`icon-location.png`
+5. 在代码中通过 `import` 引入，使用 `<Image>` 组件渲染，需显式指定 `width` 和 `height`
+
+```tsx
+import iconPrice from '@/assets/icons/share/icon-price.png';
+// ...
+<Image src={iconPrice} className="icon" mode="aspectFit" />
+```
+
+```scss
+.icon {
+  width: 18px;   /* 设计稿尺寸，非切图尺寸 */
+  height: 18px;
+}
+```
+
+## 标准开发工作流
+
+每个功能迭代必须按以下五步顺序执行，每步完成后再进入下一步。
+
+### 步骤一：规划设计 `/brainstorming`
+
+调用 `brainstorming` skill，产物：
+- 需求澄清与方案对比
+- 设计文档 → `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- 实施计划 → `docs/superpowers/plans/YYYY-MM-DD-<topic>-plan.md`
+
+### 步骤二：UI/UX 设计 `/ui-ux-pro-max`
+
+调用 `ui-ux-pro-max` skill，结合 Pencil MCP 工具进行视觉设计：
+- 在 `.pen` 文件中完成页面/组件设计稿（375px 宽度）
+- 从设计稿导出图标和切图（`mcp__pencil__export_nodes`，scale:2，png）
+- 输出至 `apps/frontend/src/assets/icons/<页面名>/`
+
+### 步骤三：编写单测用例 `/test-driven-development`
+
+调用 `test-driven-development` skill，在编码前先写测试：
+- 后端：针对 service/repository 写单元测试
+- 前端：针对关键组件/hooks 写测试用例
+- 测试通过标准在编码阶段作为验收依据
+
+### 步骤四：编码实现
+
+按实施计划逐步实现，遵循本文件的架构规范和组件原子化规范。
+从 Pencil 设计稿取色值、尺寸和切图，不自行发明 UI 细节。
+
+### 步骤五：测试验收 `/document-skills:webapp-testing`
+
+调用 `document-skills:webapp-testing` skill：
+- 运行已编写的单测，确认全部通过
+- 使用 Playwright 进行端到端交互验证
+- 截图对照设计稿确认还原度
+
+---
+
+## 注意事项
+
+- 前端设计稿宽度: 375px
+- MySQL 使用全局连接池单例模式
+- 所有 API 响应遵循 `ApiResponse<T>` 格式
+- 支持多平台: 微信(weapp)、抖音(tt)、京东(jd)
+
+---
+
+**最后更新**: 2026-04-09
