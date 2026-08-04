@@ -35,7 +35,6 @@ export interface MiniCanvasNode {
   style?: Record<string, string>;
   getContext: (type: string, options?: Record<string, unknown>) => WebGLRenderingContext | null;
   requestAnimationFrame?: (callback: FrameRequestCallback) => number;
-  cancelAnimationFrame?: (requestId: number) => void;
   addEventListener?: (type: string, listener: EventListenerOrEventListenerObject) => void;
   removeEventListener?: (type: string, listener: EventListenerOrEventListenerObject) => void;
 }

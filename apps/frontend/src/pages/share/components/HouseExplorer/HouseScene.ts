@@ -108,7 +108,6 @@ export class HouseScene {
   private readonly hotspots: HotspotRuntime[] = [];
   private readonly projectedHotspot = new THREE.Vector3();
   private readonly requestFrame: (callback: FrameRequestCallback) => number;
-  private readonly cancelFrame: (requestId: number) => void;
   private readonly startedAt = Date.now();
   private frameId: number | null = null;
   private disposed = false;
@@ -162,9 +161,6 @@ export class HouseScene {
     this.requestFrame = canvas.requestAnimationFrame
       ? canvas.requestAnimationFrame.bind(canvas)
       : (callback: FrameRequestCallback) => setTimeout(() => callback(Date.now()), 16) as unknown as number;
-    this.cancelFrame = canvas.cancelAnimationFrame
-      ? canvas.cancelAnimationFrame.bind(canvas)
-      : (requestId: number) => clearTimeout(requestId);
 
     this.scene.add(this.shellGroup, this.progressGroup, this.hotspotGroup);
     this.createLighting();
@@ -315,9 +311,11 @@ export class HouseScene {
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
-    if (this.frameId !== null) this.cancelFrame(this.frameId);
+    this.frameId = null;
     this.disposeObject(this.scene);
-    this.renderer.dispose();
+    // WebGLRenderer.dispose() calls WebGLAnimation.stop(), whose browser `self`
+    // context is null in mini-program runtimes. The native Canvas owns and
+    // releases the WebGL context when the page is destroyed.
   }
 
   private createLighting() {
