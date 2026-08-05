@@ -144,6 +144,47 @@ import iconPrice from '@/assets/icons/share/icon-price.png';
 }
 ```
 
+## Git 提交规范
+
+所有提交必须遵循 Conventional Commits，由 Husky `commit-msg` 钩子和 commitlint 强制校验：
+
+```text
+<type>(<scope>): <中文说明>
+```
+
+### type 类型
+
+- `feat`: 新增功能
+- `fix`: 修复缺陷
+- `refactor`: 不改变外部行为的代码重构
+- `docs`: 仅修改文档
+- `test`: 新增或修改测试
+- `build`: 构建系统或依赖变更
+- `ci`: CI/CD 配置变更
+- `perf`: 性能优化
+- `style`: 不影响逻辑的格式调整
+- `chore`: 其他工程维护
+- `revert`: 回退提交
+
+### scope 约定
+
+scope 可省略；填写时使用小写英文或 kebab-case，优先使用 monorepo 模块或业务域，例如：
+
+- `frontend`、`backend`、`shared`、`database`
+- `layout`、`space-record`、`skills`、`deps`
+
+### 示例
+
+```text
+feat(frontend): 新增空间点位记录页面
+fix(backend): 修复草稿完成度计算错误
+refactor(frontend): 统一页面布局与安全区
+docs(space-record): 补充空间记录接口说明
+chore(deps): 升级 Taro 依赖
+```
+
+禁止使用“更新代码”“修复问题”“提交一下”等无法表达变更目的的说明。标题最长 100 个字符。
+
 ## 标准开发工作流
 
 每个功能迭代必须按以下五步顺序执行，每步完成后再进入下一步。
@@ -192,4 +233,4 @@ import iconPrice from '@/assets/icons/share/icon-price.png';
 
 ---
 
-**最后更新**: 2026-04-09
+**最后更新**: 2026-08-05
