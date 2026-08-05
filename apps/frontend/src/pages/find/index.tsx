@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { fetchRentals } from '@/shared/api/services';
 import EmptyState from '@/shared/ui/empty-state';
-import { PageShell } from '@/shared/ui/page-shell';
+import { AppLayout } from '@/shared/ui/app-layout';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import { RentalCard } from './components/RentalCard';
@@ -86,7 +86,10 @@ export default function FindPage() {
   }
 
   return (
-    <PageShell
+    <AppLayout
+      mode="list"
+      withTabBar
+      contentClassName="find-page"
       refresherEnabled
       refresherTriggered={refreshing}
       onRefresherRefresh={handleRefresh}
@@ -126,6 +129,6 @@ export default function FindPage() {
           </View>
         )}
       </View>
-    </PageShell>
+    </AppLayout>
   );
 }

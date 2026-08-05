@@ -3,7 +3,7 @@ import Taro, { useDidShow } from '@tarojs/taro';
 
 import iconFind from '@/assets/icons/home/icon-find.png';
 import iconShare from '@/assets/icons/home/icon-share.png';
-import { PageShell } from '@/shared/ui/page-shell';
+import { AppLayout } from '@/shared/ui/app-layout';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import { ActionCard } from './components/ActionCard';
@@ -18,7 +18,7 @@ export default function HomePage() {
   });
 
   return (
-    <PageShell>
+    <AppLayout mode="list" withTabBar>
       <HeroCarousel />
 
       <View className="home-actions">
@@ -40,6 +40,6 @@ export default function HomePage() {
         <Text className="home-tips__title">屋檐记发布提示</Text>
         <Text className="home-tips__text">落笔前请隐藏手机号、门牌号、合同号等隐私信息，凭证仅供平台复核。</Text>
       </View>
-    </PageShell>
+    </AppLayout>
   );
 }

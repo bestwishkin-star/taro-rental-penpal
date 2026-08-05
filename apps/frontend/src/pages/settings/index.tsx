@@ -1,11 +1,11 @@
 import type { UserProfile, UserProfileInput } from '@shared/contracts/user';
-import { Button, ScrollView, View } from '@tarojs/components';
+import { Button, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useEffect, useState } from 'react';
 
 import { fetchUserProfile, saveUserProfile } from '@/shared/api/services';
 import { useAuthStore } from '@/shared/store';
-import { PageShell } from '@/shared/ui/page-shell';
+import { AppLayout } from '@/shared/ui/app-layout';
 
 import { SettingsAvatar } from './components/SettingsAvatar';
 import { SettingsForm } from './components/SettingsForm';
@@ -88,14 +88,14 @@ export default function SettingsPage() {
   }
 
   return (
-    <PageShell scrollEnabled={false} contentClassName="settings-page-shell">
+    <AppLayout mode="native" contentClassName="settings-page-shell" safeAreaBottom={false}>
       <View className="settings-page">
-        <ScrollView scrollY showScrollbar={false} className="settings-page__body">
+        <View className="settings-page__body">
           <View className="settings-page__body-inner">
             <SettingsAvatar avatarUrl={avatarUrl} onChange={setAvatarUrl} />
             <SettingsForm values={form} onChange={handleChange} />
           </View>
-        </ScrollView>
+        </View>
 
         <View className="settings-page__actions">
           <Button
@@ -109,6 +109,6 @@ export default function SettingsPage() {
           </Button>
         </View>
       </View>
-    </PageShell>
+    </AppLayout>
   );
 }

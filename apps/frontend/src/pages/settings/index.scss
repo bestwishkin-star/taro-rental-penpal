@@ -5,14 +5,11 @@
 .settings-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 100%;
   background: #f7f3ec;
 }
 
 .settings-page__body {
-  flex: 1;
-  min-height: 0;
+  width: 100%;
 }
 
 .settings-page__body-inner {

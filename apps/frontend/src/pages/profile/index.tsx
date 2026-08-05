@@ -9,7 +9,7 @@ import iconSettings from '@/assets/icons/profile/icon-settings.png';
 import { fetchFavorites, fetchMyRentals, fetchUserProfile, getBrowseHistory, login } from '@/shared/api/services';
 import { useAuthStore } from '@/shared/store';
 import { LoginModal } from '@/shared/ui/login-modal';
-import { PageShell } from '@/shared/ui/page-shell';
+import { AppLayout } from '@/shared/ui/app-layout';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import { ProfileHeader } from './components/ProfileHeader';
@@ -90,7 +90,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <PageShell>
+    <AppLayout mode="list" withTabBar>
       <ProfileHeader
         isLoggedIn={isLoggedIn}
         nickname={profile?.nickname}
@@ -126,6 +126,6 @@ export default function ProfilePage() {
       </View>
 
       <LoginModal visible={showLoginModal} onClose={() => setShowLoginModal(false)} onLogin={handleLogin} />
-    </PageShell>
+    </AppLayout>
   );
 }
