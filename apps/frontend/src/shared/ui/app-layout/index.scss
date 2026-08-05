@@ -1,0 +1,48 @@
+.app-layout {
+  width: 100%;
+  min-height: 100vh;
+  color: #2d241b;
+  background: #f5efe6;
+}
+
+.app-layout--list,
+.app-layout--static {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-layout__scroll--native {
+  min-height: 100vh;
+}
+
+.app-layout__scroll--list,
+.app-layout__scroll--static {
+  height: 100%;
+}
+
+.app-layout__scroll--static {
+  overflow: hidden;
+}
+
+.app-layout__content {
+  --app-layout-content-bottom: 24px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 720px;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: 18px 20px var(--app-layout-content-bottom);
+}
+
+.app-layout--native .app-layout__content {
+  min-height: 100vh;
+}
+
+.app-layout--with-tab-bar .app-layout__content {
+  --app-layout-content-bottom: 92px;
+}
+
+.app-layout--safe-bottom .app-layout__content {
+  padding-bottom: calc(var(--app-layout-content-bottom) + constant(safe-area-inset-bottom));
+  padding-bottom: calc(var(--app-layout-content-bottom) + env(safe-area-inset-bottom));
+}

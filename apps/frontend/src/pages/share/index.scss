@@ -1,11 +1,7 @@
-page {
-  height: auto;
-  min-height: 100%;
-  overflow: visible;
-}
-
 .share-page-shell {
-  padding: 18px 16px calc(28px + env(safe-area-inset-bottom));
+  --app-layout-content-bottom: 28px;
+  padding-right: 16px;
+  padding-left: 16px;
 }
 
 .share-hero {

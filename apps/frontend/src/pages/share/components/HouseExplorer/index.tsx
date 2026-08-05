@@ -24,6 +24,11 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+/** 将服务端的 0-100 完成百分比转换为 Three.js 裁切平面使用的 0-1 比例。 */
+function toCompletionRatio(completion: number) {
+  return clamp(completion, 0, 100) / 100;
+}
+
 export function HouseExplorer({
   modules,
   selectedId,
@@ -46,7 +51,7 @@ export function HouseExplorer({
     const scene = sceneRef.current;
     if (!scene) return;
     scene.setModules(modules, selectedId);
-    scene.setCompletion(completion);
+    scene.setCompletion(toCompletionRatio(completion));
   }, [completion, modules, selectedId]);
 
   useEffect(() => {
@@ -73,7 +78,7 @@ export function HouseExplorer({
             const scene = new HouseScene(result.node, width, height);
             const current = stateRef.current;
             scene.setModules(current.modules, current.selectedId);
-            scene.setCompletion(current.completion);
+            scene.setCompletion(toCompletionRatio(current.completion));
             sceneRef.current = scene;
             void scene.loadAssets().finally(() => {
               if (!disposed) setAssetsLoading(false);
@@ -164,7 +169,7 @@ export function HouseExplorer({
     sceneRef.current?.cancelInteraction();
   }
 
-  const completionPercent = Math.round(clamp(completion, 0, 1) * 100);
+  const completionPercent = Math.round(clamp(completion, 0, 100));
   const selectedModule = modules.find((module) => module.id === selectedId) ?? null;
 
   return (

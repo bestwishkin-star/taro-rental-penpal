@@ -10,7 +10,7 @@ export default defineAppConfig({
   subPackages: [
     {
       root: 'pages/share',
-      pages: ['index']
+      pages: ['index', 'point/index']
     }
   ],
   window: {

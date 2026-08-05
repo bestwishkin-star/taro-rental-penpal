@@ -1,14 +1,16 @@
 import type { RentalDetail } from '@shared/contracts/rental';
-import { Image, ScrollView, Swiper, SwiperItem, Text, View } from '@tarojs/components';
+import { Image, Swiper, SwiperItem, Text, View } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import { useEffect, useState } from 'react';
 
 import { fetchFavoriteStatus, fetchRental, getBrowseHistory, saveToBrowseHistory, toggleFavorite } from '@/shared/api/services';
 import { frontendEnv } from '@/shared/config/env';
 import { useAuthStore } from '@/shared/store';
+import { AppLayout } from '@/shared/ui/app-layout';
 
 import { CommentSection } from './components/CommentSection';
 import { ReportPanel } from './components/ReportPanel';
+import { SpaceRecordSection } from './components/SpaceRecordSection';
 
 import './index.scss';
 
@@ -81,17 +83,17 @@ export default function RentalDetailPage() {
 
   if (loading) {
     return (
-      <View className="detail-loading">
+      <AppLayout mode="native" contentClassName="detail-loading">
         <Text className="detail-loading__text">正在加载屋檐故事...</Text>
-      </View>
+      </AppLayout>
     );
   }
 
   if (!rental) {
     return (
-      <View className="detail-loading">
+      <AppLayout mode="native" contentClassName="detail-loading">
         <Text className="detail-loading__text">屋檐故事不存在</Text>
-      </View>
+      </AppLayout>
     );
   }
 
@@ -100,48 +102,47 @@ export default function RentalDetailPage() {
   const createdAtText = formatDate(rental.createdAt);
 
   return (
-    <View className="detail-page">
-      <ScrollView scrollY showScrollbar={false} className="detail-scroll">
-        <View className="detail-hero">
-          {photos.length > 0 ? (
-            <Swiper
-              className="detail-hero__swiper"
-              indicatorDots={photos.length > 1}
-              indicatorColor="rgba(255, 250, 242, 0.45)"
-              indicatorActiveColor="#fffaf2"
-              circular
-            >
-              {photos.map((url, i) => (
-                <SwiperItem key={i}>
-                  <Image src={url} className="detail-hero__img" mode="aspectFill" />
-                </SwiperItem>
-              ))}
-            </Swiper>
-          ) : (
-            <View className="detail-hero__placeholder">
-              <Text className="detail-hero__placeholder-text">屋檐故事</Text>
-            </View>
-          )}
-        </View>
-
-        <View className="detail-content">
-          <View className="detail-story">
-            <View className="detail-story__top">
-              <Text className="detail-eyebrow">屋檐故事</Text>
-              {proofSubmitted && (
-                <View className="detail-proof">
-                  <Text className="detail-proof__text">已提交凭证</Text>
-                </View>
-              )}
-            </View>
-            <Text className="detail-title">{rental.title}</Text>
-            {createdAtText && <Text className="detail-meta">{createdAtText}</Text>}
-            <Text className="detail-experience">{rental.experience}</Text>
+    <AppLayout mode="native" contentClassName="detail-page" safeAreaBottom={false}>
+      <View className="detail-hero">
+        {photos.length > 0 ? (
+          <Swiper
+            className="detail-hero__swiper"
+            indicatorDots={photos.length > 1}
+            indicatorColor="rgba(255, 250, 242, 0.45)"
+            indicatorActiveColor="#fffaf2"
+            circular
+          >
+            {photos.map((url, i) => (
+              <SwiperItem key={i}>
+                <Image src={url} className="detail-hero__img" mode="aspectFill" />
+              </SwiperItem>
+            ))}
+          </Swiper>
+        ) : (
+          <View className="detail-hero__placeholder">
+            <Text className="detail-hero__placeholder-text">屋檐故事</Text>
           </View>
+        )}
+      </View>
 
-          <CommentSection rentalId={rental.id} />
+      <View className="detail-content">
+        <View className="detail-story">
+          <View className="detail-story__top">
+            <Text className="detail-eyebrow">屋檐故事</Text>
+            {proofSubmitted && (
+              <View className="detail-proof">
+                <Text className="detail-proof__text">已提交凭证</Text>
+              </View>
+            )}
+          </View>
+          <Text className="detail-title">{rental.title}</Text>
+          {createdAtText && <Text className="detail-meta">{createdAtText}</Text>}
+          <Text className="detail-experience">{rental.experience}</Text>
         </View>
-      </ScrollView>
+
+        <SpaceRecordSection rentalId={rental.id} />
+        <CommentSection rentalId={rental.id} />
+      </View>
 
       <View className="detail-bottom">
         <View className="detail-fav-btn" onClick={handleToggleFavorite}>
@@ -152,6 +153,6 @@ export default function RentalDetailPage() {
         </View>
       </View>
       <ReportPanel rentalId={rental.id} visible={reportVisible} onClose={() => setReportVisible(false)} />
-    </View>
+    </AppLayout>
   );
 }

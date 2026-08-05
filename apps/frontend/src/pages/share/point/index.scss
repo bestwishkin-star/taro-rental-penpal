@@ -1,0 +1,110 @@
+.share-point-page {
+  --app-layout-content-bottom: 48px;
+  padding-top: 18px;
+  padding-right: 16px;
+  padding-left: 16px;
+  background: #f4f1ec;
+}
+
+.share-point-page__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.share-point-page__module {
+  color: #211c17;
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.share-point-page__completion {
+  flex: none;
+  color: #527067;
+  font-size: 12px;
+}
+
+.share-point-page__task {
+  padding: 18px 16px;
+  border: 1px solid #e0dad1;
+  border-radius: 8px;
+  background: #fbfaf8;
+}
+
+.share-point-page__message {
+  display: flex;
+  min-height: 60vh;
+  align-items: center;
+  justify-content: center;
+  color: #73695f;
+  font-size: 14px;
+}
+
+.point-step__eyebrow,
+.point-step__title,
+.point-step__prompt {
+  display: block;
+}
+
+.point-step__eyebrow {
+  color: #2c7664;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.point-step__title {
+  margin-top: 6px;
+  color: #211c17;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.point-step__prompt {
+  margin-top: 9px;
+  color: #70665d;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.point-step__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.point-step__primary,
+.point-step__secondary {
+  display: flex;
+  box-sizing: border-box;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.point-step__primary {
+  width: 100%;
+  margin-top: 20px;
+  color: #fff;
+  background: #245f51;
+}
+
+.point-step__primary--inline {
+  margin-top: 0;
+}
+
+.point-step__primary--disabled {
+  opacity: 0.42;
+}
+
+.point-step__secondary {
+  border: 1px solid #cbc2b8;
+  color: #5f564d;
+  background: #fff;
+}

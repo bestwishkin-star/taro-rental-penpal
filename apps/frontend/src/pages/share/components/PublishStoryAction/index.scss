@@ -1,0 +1,42 @@
+.publish-story-action {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid #cddbd6;
+  border-radius: 8px;
+  background: #f1f7f4;
+}
+
+.publish-story-action__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.publish-story-action__title {
+  color: #1d4f42;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.publish-story-action__subtitle {
+  color: #63756f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.publish-story-action__button {
+  display: flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 14px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  background: #245f51;
+}
+
+.publish-story-action__button--disabled {
+  opacity: 0.5;
+}

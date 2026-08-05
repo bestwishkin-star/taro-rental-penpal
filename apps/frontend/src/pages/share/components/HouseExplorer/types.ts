@@ -19,6 +19,7 @@ export interface HouseModule {
 export interface HouseExplorerProps {
   modules: HouseModule[];
   selectedId: HouseModuleId | null;
+  /** 服务端计算的房屋资料完整度百分比，取值范围为 0-100。 */
   completion: number;
   onSelect: (id: HouseModuleId) => void;
   onDismiss: () => void;

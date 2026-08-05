@@ -1,17 +1,12 @@
 .detail-page {
-  min-height: 100vh;
+  padding: 0;
   background: #f7f3ec;
-}
-
-.detail-scroll {
-  height: calc(100vh - 84px);
 }
 
 .detail-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
   background: #f7f3ec;
 }
 

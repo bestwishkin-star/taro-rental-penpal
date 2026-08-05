@@ -1,0 +1,38 @@
+.daily-scene-step__question {
+  margin-top: 20px;
+}
+
+.daily-scene-step__question-title {
+  display: block;
+  color: #2b251f;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.daily-scene-step__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.daily-scene-step__option {
+  display: flex;
+  min-height: 44px;
+  min-width: 0;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid #ded7ce;
+  border-radius: 6px;
+  color: #665d54;
+  font-size: 13px;
+  line-height: 1.4;
+  background: #fff;
+}
+
+.daily-scene-step__option--active {
+  border-color: #2c7664;
+  color: #164a3d;
+  background: #edf7f3;
+}
