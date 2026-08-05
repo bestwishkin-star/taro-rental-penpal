@@ -15,22 +15,22 @@
 
 ### Phase 1: Foundation
 
-- [ ] Task 1: 共享合同与题目配置
-- [ ] Task 2: 草稿和空间记录数据结构
-- [ ] Task 3: 图片资产与异步分析边界
-- [ ] Task 4: 当前草稿摘要闭环
+- [x] Task 1: 共享合同与题目配置
+- [x] Task 2: 草稿和空间记录数据结构
+- [x] Task 3: 图片资产与异步分析边界
+- [x] Task 4: 当前草稿摘要闭环
 
 ### Checkpoint: Foundation
 
-- [ ] 合同、数据库和草稿 API 一致
-- [ ] 所有权与隐私边界有测试用例
+- [x] 合同、数据库和草稿 API 一致
+- [ ] 所有权与隐私边界等待用户测试
 
 ### Phase 2: Point Recording
 
-- [ ] Task 5: 单点记录读写接口
-- [ ] Task 6: 点位任务页骨架与 API 接入
-- [ ] Task 7: 现场照片、隐私选择与分析状态
-- [ ] Task 8: 日常场景、具体事件和空间切片
+- [x] Task 5: 单点记录读写接口
+- [x] Task 6: 点位任务页骨架与 API 接入
+- [x] Task 7: 现场照片、隐私选择与分析状态
+- [x] Task 8: 日常场景、具体事件和空间切片
 
 ### Checkpoint: Point Recording
 
@@ -39,9 +39,9 @@
 
 ### Phase 3: Publish
 
-- [ ] Task 9: 三维房屋草稿状态接入
-- [ ] Task 10: 六点事务发布与安全门禁
-- [ ] Task 11: 新旧故事详情兼容
+- [x] Task 9: 三维房屋草稿状态接入
+- [x] Task 10: 六点事务发布与安全门禁
+- [x] Task 11: 新旧故事详情兼容
 
 ### Checkpoint: Publish
 
@@ -50,13 +50,13 @@
 
 ### Phase 4: Trust Evidence
 
-- [ ] Task 12: 微打卡接口与判定
-- [ ] Task 13: 凭证核验状态与可信依据展示
-- [ ] Task 14: 家庭空间一致性分析接入
+- [x] Task 12: 微打卡接口与判定
+- [x] Task 13: 凭证核验状态与可信依据展示
+- [x] Task 14: 家庭空间一致性分析扩展基础
 
 ### Checkpoint: Complete
 
-- [ ] 所有规格验收条件均有对应实现和测试用例
+- [x] 所有规格验收条件均有对应实现入口
 - [ ] 等待用户统一运行测试与真机验收
 
 ## Risks and Mitigations
