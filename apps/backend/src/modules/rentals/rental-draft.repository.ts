@@ -62,6 +62,68 @@ export interface UpsertRentalSpaceRecordData {
   isSliceConfirmed: boolean;
 }
 
+/**
+ * 在调用方事务内创建关联既有房屋的可编辑修订草稿。
+ * 空间和照片使用新主键复制，历史快照及首次发布草稿保持不可变。
+ */
+async function createRevisionDraftWithConnection(
+  connection: PoolConnection,
+  sourceDraftId: string,
+  rentalId: string,
+  userOpenid: string
+): Promise<RentalDraftRow> {
+  const [existingRows] = await connection.execute<RentalDraftRow[]>(
+    `SELECT id, user_openid, status, published_rental_id, updated_at
+     FROM rental_story_drafts
+     WHERE user_openid = ? AND status = 'DRAFT' AND published_rental_id = ?
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [userOpenid, rentalId]
+  );
+  if (existingRows[0]) return existingRows[0];
+
+  const revisionId = generateId();
+  await connection.execute(
+    `INSERT INTO rental_story_drafts
+      (id, user_openid, status, published_rental_id, created_at, updated_at)
+     VALUES (?, ?, 'DRAFT', ?, NOW(), NOW())`,
+    [revisionId, userOpenid, rentalId]
+  );
+
+  // 按模块复制当前六空间，新的记录主键避免修改首次发布草稿。
+  await connection.execute(
+    `INSERT INTO rental_space_records
+      (id, draft_id, module_type, prompt_version, scene_answers, event_text, event_voice_url,
+       event_occurred_period, is_slice_confirmed, completed_at, created_at, updated_at)
+     SELECT UUID(), ?, module_type, prompt_version, scene_answers, event_text, event_voice_url,
+            event_occurred_period, is_slice_confirmed, completed_at, NOW(), NOW()
+     FROM rental_space_records
+     WHERE draft_id = ?`,
+    [revisionId, sourceDraftId]
+  );
+
+  // 只复制照片绑定和可见性，不复用已经消费的一次性拍摄挑战。
+  await connection.execute(
+    `INSERT INTO rental_space_photos
+      (id, space_record_id, photo_asset_id, visibility, capture_challenge_id, captured_at, created_at)
+     SELECT UUID(), target_record.id, photo.photo_asset_id, photo.visibility, NULL, photo.captured_at, NOW()
+     FROM rental_space_records source_record
+     INNER JOIN rental_space_records target_record
+       ON target_record.draft_id = ? AND target_record.module_type = source_record.module_type
+     INNER JOIN rental_space_photos photo ON photo.space_record_id = source_record.id
+     WHERE source_record.draft_id = ?`,
+    [revisionId, sourceDraftId]
+  );
+
+  return {
+    id: revisionId,
+    user_openid: userOpenid,
+    status: 'DRAFT',
+    published_rental_id: rentalId,
+    updated_at: new Date()
+  } as RentalDraftRow;
+}
+
 /** 在指定连接中读取当前草稿，用于用户行锁保护下的幂等创建。 */
 async function findCurrentDraft(connection: PoolConnection, userOpenid: string): Promise<RentalDraftRow | null> {
   const [rows] = await connection.execute<RentalDraftRow[]>(
@@ -90,6 +152,26 @@ export async function getOrCreateRentalDraft(userOpenid: string): Promise<Rental
     if (existing) {
       await connection.commit();
       return existing;
+    }
+
+    const [publishedRows] = await connection.execute<RentalDraftRow[]>(
+      `SELECT id, user_openid, status, published_rental_id, updated_at
+       FROM rental_story_drafts
+       WHERE user_openid = ? AND status = 'PUBLISHED' AND published_rental_id IS NOT NULL
+       ORDER BY updated_at DESC
+       LIMIT 1`,
+      [userOpenid]
+    );
+    const published = publishedRows[0];
+    if (published?.published_rental_id) {
+      const revision = await createRevisionDraftWithConnection(
+        connection,
+        published.id,
+        published.published_rental_id,
+        userOpenid
+      );
+      await connection.commit();
+      return revision;
     }
 
     const id = generateId();
@@ -342,6 +424,16 @@ export async function publishRentalDraftTransaction(
       return { status: 'INCOMPLETE' };
     }
     if (draft.status === 'PUBLISHED' && draft.published_rental_id) {
+      await createRevisionDraftWithConnection(
+        connection,
+        draft.id,
+        draft.published_rental_id,
+        userOpenid
+      );
+      await connection.commit();
+      return { status: 'PUBLISHED', rentalId: draft.published_rental_id };
+    }
+    if (draft.status === 'DRAFT' && draft.published_rental_id) {
       await connection.commit();
       return { status: 'PUBLISHED', rentalId: draft.published_rental_id };
     }
@@ -419,6 +511,7 @@ export async function publishRentalDraftTransaction(
     if (snapshot.status === 'INCOMPLETE') {
       throw new Error('首次发布快照缺少完整空间记录');
     }
+    await createRevisionDraftWithConnection(connection, draftId, rentalId, userOpenid);
     await connection.commit();
     return { status: 'PUBLISHED', rentalId };
   } catch (error) {

@@ -71,7 +71,10 @@ function toSummary(draft: RentalDraftRow, records: RentalDraftRecordRow[]): Rent
     modules,
     completedModules,
     completion: Math.round((completedModules.length / HOUSE_MODULE_IDS.length) * 100),
-    canPublish: completedModules.length === HOUSE_MODULE_IDS.length && draft.status === 'DRAFT',
+    canPublish:
+      completedModules.length === HOUSE_MODULE_IDS.length &&
+      draft.status === 'DRAFT' &&
+      !draft.published_rental_id,
     publishedRentalId: draft.published_rental_id ?? undefined,
     updatedAt: new Date(draft.updated_at).toISOString()
   };
