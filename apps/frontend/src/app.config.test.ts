@@ -22,12 +22,13 @@ describe('app config', () => {
     expect(config.permission?.['scope.userLocation']).toBeUndefined();
   });
 
-  it('registers the house record timeline subpackage page', async () => {
+  it('registers the house record subpackage pages', async () => {
     const config = await loadAppConfig();
     const houseRecordPackage = config.subPackages?.find(
       (subpackage) => subpackage.root === 'pages/house-record'
     );
 
     expect(houseRecordPackage?.pages).toContain('timeline/index');
+    expect(houseRecordPackage?.pages).toContain('model/index');
   });
 });

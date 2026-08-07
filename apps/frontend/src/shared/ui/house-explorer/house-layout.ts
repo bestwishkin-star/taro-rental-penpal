@@ -1,18 +1,18 @@
 import type { HouseModuleId } from './types';
 
-import bathroomSinkModel from '../../assets/models/bathroom-sink.glb';
-import bathtubModel from '../../assets/models/bathtub.glb';
-import bedSingleModel from '../../assets/models/bed-single.glb';
-import couchMediumModel from '../../assets/models/couch-medium.glb';
-import doorModel from '../../assets/models/door.glb';
-import houseplantModel from '../../assets/models/houseplant.glb';
-import kitchenFridgeModel from '../../assets/models/kitchen-fridge.glb';
-import kitchenSinkModel from '../../assets/models/kitchen-sink.glb';
-import lightFloorModel from '../../assets/models/light-floor.glb';
-import nightStandModel from '../../assets/models/night-stand.glb';
-import ovenModel from '../../assets/models/oven.glb';
-import tableRoundSmallModel from '../../assets/models/table-round-small.glb';
-import toiletModel from '../../assets/models/toilet.glb';
+import bathroomSinkModel from '../../assets/models/house-explorer/bathroom-sink.glb';
+import bathtubModel from '../../assets/models/house-explorer/bathtub.glb';
+import bedSingleModel from '../../assets/models/house-explorer/bed-single.glb';
+import couchMediumModel from '../../assets/models/house-explorer/couch-medium.glb';
+import doorModel from '../../assets/models/house-explorer/door.glb';
+import houseplantModel from '../../assets/models/house-explorer/houseplant.glb';
+import kitchenFridgeModel from '../../assets/models/house-explorer/kitchen-fridge.glb';
+import kitchenSinkModel from '../../assets/models/house-explorer/kitchen-sink.glb';
+import lightFloorModel from '../../assets/models/house-explorer/light-floor.glb';
+import nightStandModel from '../../assets/models/house-explorer/night-stand.glb';
+import ovenModel from '../../assets/models/house-explorer/oven.glb';
+import tableRoundSmallModel from '../../assets/models/house-explorer/table-round-small.glb';
+import toiletModel from '../../assets/models/house-explorer/toilet.glb';
 
 export const HOUSE_WIDTH = 10;
 export const HOUSE_DEPTH = 7;

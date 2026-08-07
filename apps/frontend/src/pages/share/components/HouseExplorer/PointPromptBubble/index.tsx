@@ -1,6 +1,6 @@
 import { Text, View } from '@tarojs/components';
 
-import type { HouseModule } from '../types';
+import type { HouseModule } from '@/shared/ui/house-explorer';
 
 import './index.scss';
 

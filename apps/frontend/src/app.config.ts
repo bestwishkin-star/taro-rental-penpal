@@ -14,7 +14,7 @@ export default defineAppConfig({
     },
     {
       root: 'pages/house-record',
-      pages: ['timeline/index']
+      pages: ['timeline/index', 'model/index']
     }
   ],
   window: {
