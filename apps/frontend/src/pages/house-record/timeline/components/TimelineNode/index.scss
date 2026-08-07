@@ -1,0 +1,96 @@
+.timeline-node {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 76px;
+  height: 92px;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.timeline-node--pressed {
+  opacity: 0.82;
+  transform: scale(0.94);
+}
+
+.timeline-node__asset-wrap {
+  position: relative;
+  width: 68px;
+  height: 68px;
+}
+
+.timeline-node__asset {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 68px;
+  height: 68px;
+  filter: drop-shadow(0 5px 7px rgba(42, 52, 31, 0.22));
+  animation: timeline-node-breathe 3.6s ease-in-out infinite;
+}
+
+.timeline-node--apple .timeline-node__asset {
+  animation-delay: -1.4s;
+}
+
+.timeline-node__glow {
+  position: absolute;
+  z-index: 1;
+  top: 9px;
+  left: 9px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 216, 92, 0.44);
+  box-shadow: 0 0 18px rgba(255, 204, 75, 0.76);
+  animation: timeline-node-glow 2.2s ease-in-out infinite;
+}
+
+.timeline-node__date {
+  position: relative;
+  z-index: 4;
+  min-width: 42px;
+  margin-top: -5px;
+  padding: 2px 6px;
+  border: 1px solid rgba(76, 65, 46, 0.14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #39433a;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.timeline-node__caption {
+  margin-top: 1px;
+  color: #a84f3e;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+@keyframes timeline-node-breathe {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+
+  50% {
+    transform: translateY(-4px) rotate(1deg);
+  }
+}
+
+@keyframes timeline-node-glow {
+  0%,
+  100% {
+    opacity: 0.52;
+    transform: scale(0.88);
+  }
+
+  50% {
+    opacity: 0.92;
+    transform: scale(1.12);
+  }
+}

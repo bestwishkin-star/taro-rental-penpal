@@ -1,0 +1,61 @@
+.growth-tree {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  min-height: 844px;
+  background: #cfe8ef;
+}
+
+.growth-tree__scene {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.growth-tree__veil {
+  position: absolute;
+  z-index: 1;
+  inset: 0 0 auto;
+  height: 156px;
+  background: linear-gradient(
+    180deg,
+    rgba(247, 251, 247, 0.92) 0%,
+    rgba(247, 251, 247, 0.52) 64%,
+    rgba(247, 251, 247, 0) 100%
+  );
+}
+
+.growth-tree__heading {
+  position: absolute;
+  z-index: 4;
+  top: 20px;
+  right: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.growth-tree__eyebrow {
+  color: #b0523e;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+}
+
+.growth-tree__title {
+  width: 280px;
+  margin-top: 2px;
+  color: #27372f;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.growth-tree__summary {
+  margin-top: 5px;
+  color: #607268;
+  font-size: 12px;
+  line-height: 18px;
+}

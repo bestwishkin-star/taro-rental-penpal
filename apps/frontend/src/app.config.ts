@@ -11,6 +11,10 @@ export default defineAppConfig({
     {
       root: 'pages/share',
       pages: ['index', 'point/index']
+    },
+    {
+      root: 'pages/house-record',
+      pages: ['timeline/index']
     }
   ],
   window: {
