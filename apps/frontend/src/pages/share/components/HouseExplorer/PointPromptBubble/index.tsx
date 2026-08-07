@@ -4,12 +4,14 @@ import type { HouseModule } from '@/shared/ui/house-explorer';
 
 import './index.scss';
 
+/** 编辑态点位提示气泡属性。 */
 interface PointPromptBubbleProps {
   module: HouseModule;
   onClose: () => void;
   onSupplement: () => void;
 }
 
+/** 根据点位完成状态引导用户补充或更新空间记录。 */
 export function PointPromptBubble({ module, onClose, onSupplement }: PointPromptBubbleProps) {
   const actionLabel = module.completed ? '更新' : '补充';
 

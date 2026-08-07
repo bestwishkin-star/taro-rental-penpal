@@ -40,6 +40,7 @@ export default function HouseRecordModelPage() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
+  // 路由参数同时决定房屋和自然日，缺失任一参数都不请求公开接口。
   useEffect(() => {
     const params = Taro.getCurrentInstance().router?.params ?? {};
     if (!params.rentalId || !params.snapshotDate) {

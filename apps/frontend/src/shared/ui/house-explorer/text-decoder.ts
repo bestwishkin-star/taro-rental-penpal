@@ -1,5 +1,7 @@
+/** 小程序 TextDecoder 兼容层允许的二进制输入。 */
 type DecoderInput = ArrayBuffer | ArrayBufferView;
 
+/** 将不同二进制视图统一为 Uint8Array。 */
 function toBytes(input?: DecoderInput) {
   if (!input) return new Uint8Array();
   if (ArrayBuffer.isView(input)) {
@@ -8,7 +10,9 @@ function toBytes(input?: DecoderInput) {
   return new Uint8Array(input);
 }
 
+/** 在缺少原生 TextDecoder 时提供最小 UTF-8 解码实现。 */
 class MiniProgramTextDecoder {
+  /** 按 UTF-8 字节序列解码 BMP 和代理对字符。 */
   decode(input?: DecoderInput) {
     const bytes = toBytes(input);
     let output = '';
@@ -57,6 +61,7 @@ class MiniProgramTextDecoder {
   }
 }
 
+/** 仅在运行时缺失时安装 TextDecoder 兼容实现。 */
 export function ensureTextDecoder() {
   const runtime = globalThis as unknown as { TextDecoder?: unknown };
   if (typeof runtime.TextDecoder === 'function') return;

@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 import { ensureTextDecoder } from './text-decoder';
 
+/** 复制跨 JS Realm 的二进制数据，保证 Three.js 可识别。 */
 function normalizeArrayBuffer(data: string | ArrayBuffer) {
   if (typeof data === 'string') {
     throw new Error('GLB read failed: expected binary data but received text');
@@ -17,6 +18,7 @@ function normalizeArrayBuffer(data: string | ArrayBuffer) {
   return normalized.buffer;
 }
 
+/** 解码构建工具内联为 data URL 的 GLB。 */
 function decodeInlineGlb(source: string) {
   const marker = ';base64,';
   const markerIndex = source.indexOf(marker);
@@ -26,6 +28,7 @@ function decodeInlineGlb(source: string) {
   return normalizeArrayBuffer(Taro.base64ToArrayBuffer(source.slice(markerIndex + marker.length)));
 }
 
+/** 通过小程序文件系统读取本地 GLB 二进制。 */
 async function readLocalGlb(filePath: string) {
   return new Promise<ArrayBuffer>((resolve, reject) => {
     Taro.getFileSystemManager().readFile({
@@ -42,6 +45,7 @@ async function readLocalGlb(filePath: string) {
   });
 }
 
+/** 加载打包后的 GLB，并解析为可加入场景的 Three.js Group。 */
 export async function loadPackagedGlb(source: string): Promise<Group> {
   const data = source.startsWith('data:') ? decodeInlineGlb(source) : await readLocalGlb(source);
   ensureTextDecoder();

@@ -14,6 +14,7 @@ import {
 import { loadPackagedGlb } from './model-loader';
 import type { HouseModule, HouseModuleId, MiniCanvasNode } from './types';
 
+/** 单个发光热点在 Three.js 场景中的运行时对象。 */
 interface HotspotRuntime {
   id: HouseModuleId;
   sphere: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
@@ -22,6 +23,7 @@ interface HotspotRuntime {
   selected: boolean;
 }
 
+/** 单指旋转手势的起点、末点和移动距离。 */
 interface OrbitState {
   active: boolean;
   startX: number;
@@ -31,22 +33,28 @@ interface OrbitState {
   distance: number;
 }
 
+/** 双指缩放手势开始时的距离和相机半径。 */
 interface ZoomState {
   active: boolean;
   startDistance: number;
   startRadius: number;
 }
 
+/** 区分点击热点与拖动旋转的最小位移阈值。 */
 const CLICK_THRESHOLD = 8;
+/** 热点投影到屏幕后允许命中的像素半径。 */
 const HOTSPOT_HIT_RADIUS = 42;
+/** 相机默认距离以及允许缩放的边界。 */
 const DEFAULT_CAMERA_RADIUS = 18.2;
 const MIN_CAMERA_RADIUS = 12;
 const MAX_CAMERA_RADIUS = 25;
 
+/** 将数值约束在指定闭区间内。 */
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
+/** 补齐小程序 Canvas 缺失的 DOM 属性，适配 Three.js 渲染器。 */
 function patchCanvasForThree(canvas: MiniCanvasNode, width: number, height: number) {
   canvas.clientWidth = width;
   canvas.clientHeight = height;
@@ -57,6 +65,7 @@ function patchCanvasForThree(canvas: MiniCanvasNode, width: number, height: numb
   canvas.removeEventListener ??= () => undefined;
 }
 
+/** 克隆材质并分别配置暗态底层或完成度裁切亮层。 */
 function cloneMaterial(material: THREE.Material, mode: 'base' | 'progress', plane: THREE.Plane) {
   const next = material.clone();
   if (next instanceof THREE.MeshStandardMaterial) {
@@ -85,6 +94,7 @@ function cloneMaterial(material: THREE.Material, mode: 'base' | 'progress', plan
   return next;
 }
 
+/** 遍历模型并替换为当前完成度模式对应的独立材质。 */
 function replaceMaterials(root: THREE.Object3D, mode: 'base' | 'progress', plane: THREE.Plane) {
   root.traverse((object) => {
     if (!(object instanceof THREE.Mesh)) return;
@@ -96,6 +106,7 @@ function replaceMaterials(root: THREE.Object3D, mode: 'base' | 'progress', plane
   });
 }
 
+/** 管理透明别墅场景、家具资源、热点交互和动画生命周期。 */
 export class HouseScene {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -131,6 +142,7 @@ export class HouseScene {
     startRadius: DEFAULT_CAMERA_RADIUS
   };
 
+  /** 创建渲染器、相机、房屋结构和持续动画。 */
   constructor(private readonly canvas: MiniCanvasNode, width: number, height: number) {
     this.width = width;
     this.height = height;
@@ -171,6 +183,7 @@ export class HouseScene {
     this.renderFrame();
   }
 
+  /** 顺序加载分包内家具 GLB，单个失败不会中断其余家具。 */
   async loadAssets() {
     for (const config of HOUSE_ASSETS) {
       if (this.disposed) return;
@@ -187,6 +200,7 @@ export class HouseScene {
     }
   }
 
+  /** 同步 Canvas、相机宽高比和渲染器尺寸。 */
   resize(width: number, height: number) {
     if (width <= 0 || height <= 0) return;
     this.width = width;
@@ -197,6 +211,7 @@ export class HouseScene {
     this.renderer.setSize(width, height, false);
   }
 
+  /** 根据空间完成状态和当前选中项更新热点与房间高亮。 */
   setModules(modules: HouseModule[], selectedId: HouseModuleId | null) {
     const state = new Map(modules.map((module) => [module.id, module]));
     this.hotspots.forEach((hotspot) => {
@@ -213,17 +228,20 @@ export class HouseScene {
     });
   }
 
+  /** 将 0-1 完成比例映射到房屋高度裁切平面。 */
   setCompletion(completion: number) {
     const normalized = clamp(completion, 0, 1);
     this.progressPlane.constant = HOUSE_MIN_Y + (HOUSE_MAX_Y - HOUSE_MIN_Y) * normalized;
   }
 
+  /** 开始单指旋转并记录点击候选起点。 */
   beginOrbit(x: number, y: number) {
     this.zoom.active = false;
     this.tapCandidate = true;
     this.orbit = { active: true, startX: x, startY: y, lastX: x, lastY: y, distance: 0 };
   }
 
+  /** 根据单指移动量更新水平和俯仰视角。 */
   moveOrbit(x: number, y: number) {
     if (!this.orbit.active) return;
     const deltaX = x - this.orbit.lastX;
@@ -239,6 +257,7 @@ export class HouseScene {
     this.updateCamera();
   }
 
+  /** 结束旋转，并根据总位移判断是否仍可视为热点点击。 */
   endOrbit(x?: number, y?: number) {
     if (!this.orbit.active) return;
     if (Number.isFinite(x) && Number.isFinite(y)) {
@@ -251,6 +270,7 @@ export class HouseScene {
     if (this.orbit.distance > CLICK_THRESHOLD) this.tapCandidate = false;
   }
 
+  /** 将最后一次有效点击投影到最近热点并返回空间标识。 */
   selectLastPointer() {
     if (!this.tapCandidate) return null;
     this.tapCandidate = false;
@@ -270,6 +290,7 @@ export class HouseScene {
     return selectedId;
   }
 
+  /** 开始双指缩放并保存初始距离与相机半径。 */
   beginZoom(distance: number) {
     if (distance <= 0) return;
     this.orbit.active = false;
@@ -281,6 +302,7 @@ export class HouseScene {
     };
   }
 
+  /** 根据双指距离变化实时更新相机半径。 */
   moveZoom(distance: number) {
     if (!this.zoom.active || distance <= 0) return;
     this.radius = clamp(
@@ -291,10 +313,12 @@ export class HouseScene {
     this.updateCamera();
   }
 
+  /** 结束双指缩放状态。 */
   endZoom() {
     this.zoom.active = false;
   }
 
+  /** 供工具栏按钮按比例放大或缩小场景。 */
   zoomBy(scale: number) {
     if (scale <= 0) return;
     this.cancelInteraction();
@@ -302,12 +326,14 @@ export class HouseScene {
     this.updateCamera();
   }
 
+  /** 触摸取消时清理旋转、缩放和点击候选状态。 */
   cancelInteraction() {
     this.orbit.active = false;
     this.zoom.active = false;
     this.tapCandidate = false;
   }
 
+  /** 停止动画并释放渲染器、几何体、材质和纹理。 */
   dispose() {
     if (this.disposed) return;
     this.disposed = true;
@@ -318,6 +344,7 @@ export class HouseScene {
     // releases the WebGL context when the page is destroyed.
   }
 
+  /** 创建环境光、半球光和主辅方向光。 */
   private createLighting() {
     this.scene.add(new THREE.HemisphereLight('#f8fbfa', '#657a66', 2.25));
     const keyLight = new THREE.DirectionalLight('#fff4df', 2.7);
@@ -331,6 +358,7 @@ export class HouseScene {
     this.scene.add(interiorLight);
   }
 
+  /** 构建透明别墅主体、楼层、玻璃墙和室内结构。 */
   private createHouseShell() {
     ROOMS.filter((room) => room.id !== 'neighborhood').forEach((room) => {
       this.addLayeredBox(
@@ -411,6 +439,7 @@ export class HouseScene {
     this.addLayeredBox(new THREE.BoxGeometry(5.8, 0.035, 0.06), [1.35, 4.96, 3.06], led);
   }
 
+  /** 构建庭院、道路、绿地、树木和周边环境高亮。 */
   private createEnvironment() {
     this.addStaticBox([14.2, 0.12, 12], [0, -0.24, 1.25], '#c8cbc5');
     this.addStaticBox([4.35, 0.09, 4.2], [-3.85, -0.14, 4.2], '#547650');
@@ -447,6 +476,7 @@ export class HouseScene {
     this.roomHighlights.set('neighborhood', highlight);
   }
 
+  /** 创建选中空间使用的半透明地面高亮。 */
   private createHighlight(size: [number, number], color: string) {
     const highlight = new THREE.Mesh(
       new THREE.PlaneGeometry(size[0] - 0.12, size[1] - 0.12),
@@ -463,6 +493,7 @@ export class HouseScene {
     return highlight;
   }
 
+  /** 为六个空间创建发光球和呼吸光环。 */
   private createHotspots() {
     const sphereGeometry = new THREE.SphereGeometry(0.15, 16, 12);
     const haloGeometry = new THREE.TorusGeometry(0.24, 0.032, 8, 24);
@@ -495,6 +526,7 @@ export class HouseScene {
     });
   }
 
+  /** 同时添加暗态底层和受完成度裁切的亮态盒体。 */
   private addLayeredBox(geometry: THREE.BufferGeometry, position: [number, number, number], color: string) {
     const baseMaterial = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color).multiplyScalar(0.62),
@@ -520,6 +552,7 @@ export class HouseScene {
     this.progressGroup.add(progress);
   }
 
+  /** 同时添加暗态与亮态透明玻璃结构。 */
   private addLayeredGlass(
     position: [number, number, number],
     size: [number, number, number],
@@ -559,10 +592,12 @@ export class HouseScene {
     this.progressGroup.add(progress);
   }
 
+  /** 添加不参与完成度裁切的静态盒体。 */
   private addStaticBox(size: [number, number, number], position: [number, number, number], color: string) {
     this.addStaticMesh(new THREE.BoxGeometry(...size), position, color);
   }
 
+  /** 使用统一材质创建静态环境网格。 */
   private addStaticMesh(geometry: THREE.BufferGeometry, position: [number, number, number], color: string) {
     const mesh = new THREE.Mesh(
       geometry,
@@ -573,6 +608,7 @@ export class HouseScene {
     return mesh;
   }
 
+  /** 在庭院指定位置组合树干和多层树冠。 */
   private addTree(x: number, z: number, scale: number) {
     this.addStaticMesh(
       new THREE.CylinderGeometry(0.11 * scale, 0.16 * scale, 1.45 * scale, 8),
@@ -594,6 +630,7 @@ export class HouseScene {
     });
   }
 
+  /** 在庭院指定位置添加低矮灌木。 */
   private addShrub(x: number, z: number, radius: number) {
     const shrub = this.addStaticMesh(
       new THREE.SphereGeometry(radius, 10, 7),
@@ -603,6 +640,7 @@ export class HouseScene {
     shrub.scale.y = 0.72;
   }
 
+  /** 按配置缩放、定位家具并生成暗亮双层模型。 */
   private addAsset(model: THREE.Group, config: HouseAssetConfig) {
     const initialSize = new THREE.Box3().setFromObject(model).getSize(new THREE.Vector3());
     const longest = Math.max(initialSize.x, initialSize.y, initialSize.z) || 1;
@@ -620,6 +658,7 @@ export class HouseScene {
     this.progressGroup.add(progressModel);
   }
 
+  /** 根据球面视角参数更新相机位置并对准房屋中心。 */
   private updateCamera() {
     const horizontal = Math.cos(this.pitch) * this.radius;
     this.camera.position.set(
@@ -630,6 +669,7 @@ export class HouseScene {
     this.camera.lookAt(0, 2.05, 0.45);
   }
 
+  /** 驱动热点呼吸动画并提交当前帧。 */
   private renderFrame = () => {
     if (this.disposed) return;
     const elapsed = (Date.now() - this.startedAt) / 1000;
@@ -644,6 +684,7 @@ export class HouseScene {
     this.frameId = this.requestFrame(this.renderFrame);
   };
 
+  /** 去重收集并释放对象树中的几何体、材质和纹理。 */
   private disposeObject(root: THREE.Object3D) {
     const geometries = new Set<THREE.BufferGeometry>();
     const materials = new Set<THREE.Material>();

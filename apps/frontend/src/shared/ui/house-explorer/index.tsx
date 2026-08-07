@@ -13,12 +13,15 @@ import './index.scss';
 
 export type { HouseModule, HouseModuleId } from './types';
 
+/** 共享 WebGL Canvas 标识、初始化重试和界面文案。 */
 const CANVAS_ID = 'share-house-webgl';
 const MAX_INIT_ATTEMPTS = 8;
 const COMPLETION_LABEL = '\u5b8c\u6574\u5ea6';
 const LOADING_LABEL = '\u6b63\u5728\u5e03\u7f6e\u623f\u95f4';
+/** 当前 Canvas 手势互斥状态。 */
 type GestureMode = 'idle' | 'orbit' | 'zoom';
 
+/** 将数值限制在指定闭区间。 */
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
@@ -28,6 +31,7 @@ function toCompletionRatio(completion: number) {
   return clamp(completion, 0, 100) / 100;
 }
 
+/** 共享三维房屋画布，负责生命周期、旋转、缩放和热点选择。 */
 export function HouseExplorer({
   modules,
   selectedId,
@@ -57,6 +61,7 @@ export function HouseExplorer({
   useEffect(() => {
     let disposed = false;
 
+    /** 查询 Canvas 节点并按上限重试初始化 Three.js 场景。 */
     function initialize(attempt = 0) {
       Taro.createSelectorQuery()
         .select(`#${CANVAS_ID}`)
@@ -104,10 +109,12 @@ export function HouseExplorer({
     };
   }, []);
 
+  /** 从触摸结束事件中读取最终指针位置。 */
   function getTouchPoint(event: CanvasTouchEvent) {
     return event.changedTouches[0] ?? event.touches[0] ?? null;
   }
 
+  /** 计算双指之间的当前距离。 */
   function getTouchDistance(event: CanvasTouchEvent) {
     const first = event.touches[0];
     const second = event.touches[1];
@@ -115,6 +122,7 @@ export function HouseExplorer({
     return Math.hypot(second.x - first.x, second.y - first.y);
   }
 
+  /** 根据触点数量进入旋转或缩放模式。 */
   function handleTouchStart(event: CanvasTouchEvent) {
     if (event.touches.length >= 2) {
       gestureModeRef.current = 'zoom';
@@ -128,6 +136,7 @@ export function HouseExplorer({
     sceneRef.current?.beginOrbit(point.x, point.y);
   }
 
+  /** 将移动事件分发给旋转或缩放控制器。 */
   function handleTouchMove(event: CanvasTouchEvent) {
     if (event.touches.length >= 2) {
       const distance = getTouchDistance(event);
@@ -145,6 +154,7 @@ export function HouseExplorer({
     sceneRef.current?.moveOrbit(point.x, point.y);
   }
 
+  /** 结束当前手势并保留可能的热点点击。 */
   function handleTouchEnd(event: CanvasTouchEvent) {
     if (gestureModeRef.current === 'zoom') {
       sceneRef.current?.endZoom();
@@ -163,11 +173,13 @@ export function HouseExplorer({
     gestureModeRef.current = 'idle';
   }
 
+  /** 命中最近热点后通知页面更新选中空间。 */
   function handleCanvasClick() {
     const moduleId = sceneRef.current?.selectLastPointer();
     if (moduleId) onSelectRef.current(moduleId);
   }
 
+  /** 系统取消触摸时清理所有交互状态。 */
   function handleTouchCancel() {
     gestureModeRef.current = 'idle';
     sceneRef.current?.cancelInteraction();
