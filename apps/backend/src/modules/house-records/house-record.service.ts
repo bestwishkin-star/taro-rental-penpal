@@ -1,0 +1,156 @@
+import type {
+  HouseRecordListing,
+  HouseRecordSnapshotResponse,
+  HouseRecordSnapshotStatus,
+  HouseRecordTimelineResponse
+} from '@shared/contracts/house-record';
+import type { ListRentalsQuery } from '@shared/contracts/rental';
+import { BizCode } from '@shared/errors';
+
+import { AppError } from '@/lib/errors';
+
+import { getShanghaiDate, getTimelineRange } from './house-record-date';
+import {
+  countRecentSnapshots,
+  getBatchTrustLabels,
+  getOwnerHouseRecordState,
+  getOwnerSnapshotStatus,
+  getPublicHouseRecordSummary,
+  getPublicSnapshotHeader,
+  getRentalTrustEvidence,
+  listLatestPublicSnapshots,
+  listSnapshotPhotos,
+  listSnapshotSpaces,
+  listTimelineModules,
+  listTimelineSnapshots
+} from './house-record.repository';
+import { publishCurrentHouseRecord } from './house-record-snapshot.service';
+
+/** 发现列表单页最大数量，避免公开接口被超大分页拖垮。 */
+const MAX_PAGE_SIZE = 50;
+
+/** 将字符串分页参数限制为正整数。 */
+function positiveInteger(value: string | undefined, fallback: number, maximum?: number): number {
+  const parsed = Number.parseInt(value ?? '', 10);
+  const normalized = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+  return maximum ? Math.min(normalized, maximum) : normalized;
+}
+
+/** 读取房屋实录发现列表，并批量补齐更新次数和可信标签。 */
+export async function readHouseRecords(
+  query: ListRentalsQuery,
+  now = new Date()
+): Promise<HouseRecordListing[]> {
+  const page = positiveInteger(query.page, 1);
+  const pageSize = positiveInteger(query.pageSize, 10, MAX_PAGE_SIZE);
+  const rows = await listLatestPublicSnapshots({ keyword: query.keyword, page, pageSize });
+  const rentalIds = rows.map((row) => row.rentalId);
+  const range = getTimelineRange(getShanghaiDate(now));
+  const [counts, labels] = await Promise.all([
+    countRecentSnapshots(rentalIds, range),
+    getBatchTrustLabels(rentalIds)
+  ]);
+  return rows.map((row) => ({
+    rentalId: row.rentalId,
+    title: row.title,
+    contentPreview: row.contentPreview,
+    coverPhoto: row.coverPhoto,
+    author: { nickname: row.nickname, avatar: row.avatar },
+    trustLabels: labels.get(row.rentalId) ?? [],
+    recentUpdateCount: counts.get(row.rentalId) ?? 0,
+    latestSnapshotDate: row.latestSnapshotDate,
+    updatedAt: row.updatedAt
+  }));
+}
+
+/** 读取最近 30 天成长树，仅映射数据库真实存在的更新日期。 */
+export async function readHouseRecordTimeline(
+  rentalId: string,
+  _days = 30,
+  now = new Date()
+): Promise<HouseRecordTimelineResponse> {
+  const range = getTimelineRange(getShanghaiDate(now));
+  const summary = await getPublicHouseRecordSummary(rentalId);
+  if (!summary) throw new AppError(BizCode.RENTAL_NOT_FOUND);
+
+  const snapshots = await listTimelineSnapshots(rentalId, range);
+  const [modules, labels] = await Promise.all([
+    listTimelineModules(snapshots.map((snapshot) => snapshot.snapshotId)),
+    getBatchTrustLabels([rentalId])
+  ]);
+  return {
+    rentalId,
+    title: summary.title,
+    author: { nickname: summary.nickname, avatar: summary.avatar },
+    trustLabels: labels.get(rentalId) ?? [],
+    rangeStart: range.start,
+    rangeEnd: range.end,
+    nodes: snapshots.map((snapshot, index) => ({
+      snapshotDate: snapshot.snapshotDate,
+      source: snapshot.source,
+      updatedModules: modules.get(snapshot.snapshotId) ?? [],
+      contentPreview: snapshot.contentPreview,
+      coverPhoto: snapshot.coverPhoto,
+      isLatest: index === 0
+    }))
+  };
+}
+
+/** 读取指定日期的不可变公开快照，正文和照片均不回查当前草稿。 */
+export async function readHouseRecordSnapshot(
+  rentalId: string,
+  snapshotDate: string
+): Promise<HouseRecordSnapshotResponse> {
+  const header = await getPublicSnapshotHeader(rentalId, snapshotDate);
+  if (!header) throw new AppError(BizCode.SNAPSHOT_NOT_FOUND);
+
+  const spaces = await listSnapshotSpaces(header.snapshotId);
+  const [photos, trustEvidence] = await Promise.all([
+    listSnapshotPhotos(spaces.map((space) => space.snapshotSpaceId)),
+    getRentalTrustEvidence(rentalId)
+  ]);
+  return {
+    rentalId: header.rentalId,
+    snapshotDate: header.snapshotDate,
+    source: header.source,
+    records: spaces.map((space) => ({
+      module: space.module,
+      publicPhotos: photos.get(space.snapshotSpaceId) ?? [],
+      sceneAnswers: space.sceneAnswers,
+      observations: space.observations,
+      eventText: space.eventText,
+      eventVoiceUrl: space.eventVoiceUrl,
+      eventOccurredPeriod: space.eventOccurredPeriod
+    })),
+    trustEvidence
+  };
+}
+
+/** 读取房主当前态是否晚于最后公开快照。 */
+export async function readHouseRecordSnapshotStatus(
+  userOpenid: string,
+  rentalId: string
+): Promise<HouseRecordSnapshotStatus> {
+  const state = await getOwnerHouseRecordState(userOpenid, rentalId);
+  if (!state) throw new AppError(BizCode.RENTAL_PERMISSION_DENIED);
+  if (!state.isPublished) throw new AppError(BizCode.RENTAL_NOT_PUBLISHED);
+
+  const status = await getOwnerSnapshotStatus(userOpenid, rentalId);
+  if (!status) throw new AppError(BizCode.RENTAL_NOT_FOUND);
+  return {
+    currentUpdatedAt: status.currentUpdatedAt,
+    latestSnapshotDate: status.latestSnapshotDate,
+    hasUnpublishedChanges:
+      !status.latestSnapshotUpdatedAt ||
+      new Date(status.currentUpdatedAt).getTime() >
+        new Date(status.latestSnapshotUpdatedAt).getTime()
+  };
+}
+
+/** 校验所有权和公开状态后生成或覆盖房主当天快照。 */
+export async function updateOwnedHouseRecord(userOpenid: string, rentalId: string) {
+  const state = await getOwnerHouseRecordState(userOpenid, rentalId);
+  if (!state) throw new AppError(BizCode.RENTAL_PERMISSION_DENIED);
+  if (!state.isPublished) throw new AppError(BizCode.RENTAL_NOT_PUBLISHED);
+  return publishCurrentHouseRecord(userOpenid, rentalId);
+}

@@ -21,6 +21,10 @@ export const BizCode = {
   // 租房 1300-1399
   RENTAL_NOT_FOUND: 1300,
   RENTAL_PERMISSION_DENIED: 1301,
+  RENTAL_NOT_PUBLISHED: 1302,
+  SPACE_RECORD_INCOMPLETE: 1303,
+  SNAPSHOT_NOT_FOUND: 1304,
+  SNAPSHOT_PHOTO_NOT_PUBLIC: 1305,
 
   // 聊天 1400-1499
   CONVERSATION_NOT_FOUND: 1400,
@@ -40,5 +44,9 @@ export const BizMessage = {
   [BizCode.USER_PROFILE_INCOMPLETE]: '用户信息未完善',
   [BizCode.RENTAL_NOT_FOUND]: '租房信息不存在',
   [BizCode.RENTAL_PERMISSION_DENIED]: '无权操作该租房信息',
+  [BizCode.RENTAL_NOT_PUBLISHED]: '房屋实录尚未公开',
+  [BizCode.SPACE_RECORD_INCOMPLETE]: '请先完成六个空间记录',
+  [BizCode.SNAPSHOT_NOT_FOUND]: '未找到指定日期的房屋实录',
+  [BizCode.SNAPSHOT_PHOTO_NOT_PUBLIC]: '照片不可公开展示',
   [BizCode.CONVERSATION_NOT_FOUND]: '会话不存在',
 };
