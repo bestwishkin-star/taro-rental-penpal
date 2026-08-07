@@ -12,6 +12,8 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
 
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
+import { getShanghaiDate } from '@/modules/house-records/house-record-date';
+import { replaceSnapshotFromDraftWithConnection } from '@/modules/house-records/house-record-snapshot.repository';
 
 /** 服务端草稿主表行。 */
 export interface RentalDraftRow extends RowDataPacket {
@@ -406,6 +408,17 @@ export async function publishRentalDraftTransaction(
        WHERE id = ?`,
       [rentalId, draftId]
     );
+    // 首次公开快照与租房主体必须同事务提交，避免发现页出现没有时间线的房屋。
+    const snapshot = await replaceSnapshotFromDraftWithConnection(connection, {
+      draftId,
+      rentalId,
+      ownerOpenid: userOpenid,
+      snapshotDate: getShanghaiDate(),
+      source: 'SYSTEM'
+    });
+    if (snapshot.status === 'INCOMPLETE') {
+      throw new Error('首次发布快照缺少完整空间记录');
+    }
     await connection.commit();
     return { status: 'PUBLISHED', rentalId };
   } catch (error) {
