@@ -1,25 +1,26 @@
-import type { ListRentalsQuery, RentalListing } from '@shared/contracts/rental';
+import type { HouseRecordListing } from '@shared/contracts/house-record';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { fetchRentals } from '@/shared/api/services';
-import EmptyState from '@/shared/ui/empty-state';
+import { fetchHouseRecords } from '@/shared/api/house-record';
 import { AppLayout } from '@/shared/ui/app-layout';
+import EmptyState from '@/shared/ui/empty-state';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
-import { RentalCard } from './components/RentalCard';
+import { HouseRecordCard } from './components/HouseRecordCard';
 import { SearchBar } from './components/SearchBar';
 
 import './index.scss';
 
+/** 发现页固定分页大小。 */
 const PAGE_SIZE = 10;
 
-/** 发现页，展示社区里的屋檐故事内容流。 */
+/** 发现页，展示社区成员持续更新的房屋实录。 */
 export default function FindPage() {
   const [keyword, setKeyword] = useState('');
   const [debouncedKeyword, setDebouncedKeyword] = useState('');
-  const [rentals, setRentals] = useState<RentalListing[]>([]);
+  const [records, setRecords] = useState<HouseRecordListing[]>([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -36,25 +37,25 @@ export default function FindPage() {
     return () => clearTimeout(timer);
   }, [keyword]);
 
+  /** 加载一页实录，并根据 append 决定替换或追加。 */
   const loadPage = useCallback(
-    async (pageNum: number, append: boolean) => {
+    async (pageNumber: number, append: boolean) => {
       if (requestingRef.current) return;
       requestingRef.current = true;
       if (append) setLoadingMore(true);
       else setLoading(true);
 
       try {
-        const query: ListRentalsQuery = {
+        const data = await fetchHouseRecords({
           keyword: debouncedKeyword || undefined,
-          page: String(pageNum),
-          pageSize: String(PAGE_SIZE)
-        };
-        const data = await fetchRentals(query);
-        setRentals((prev) => (append ? [...prev, ...data] : data));
+          page: pageNumber,
+          pageSize: PAGE_SIZE
+        });
+        setRecords((previous) => (append ? [...previous, ...data] : data));
         setHasMore(data.length === PAGE_SIZE);
-        setPage(pageNum);
+        setPage(pageNumber);
       } catch {
-        void Taro.showToast({ title: '加载屋檐故事失败，请稍后再试', icon: 'none' });
+        void Taro.showToast({ title: '房屋实录暂时走丢了，请稍后再试', icon: 'none' });
       } finally {
         setLoading(false);
         setLoadingMore(false);
@@ -85,6 +86,13 @@ export default function FindPage() {
     setKeyword('');
   }
 
+  /** 打开某套房屋最近一个月的成长记录。 */
+  function openTimeline(rentalId: string) {
+    void Taro.navigateTo({
+      url: `/pages/house-record/timeline/index?rentalId=${rentalId}`
+    });
+  }
+
   return (
     <AppLayout
       mode="list"
@@ -96,10 +104,8 @@ export default function FindPage() {
       onScrollToLower={handleScrollToLower}
     >
       <View className="find-header">
-        <View className="find-header__copy">
-          <Text className="find-header__title">一方屋檐下</Text>
-          <Text className="find-header__subtitle">翻看住过的人留下的照片和故事</Text>
-        </View>
+        <Text className="find-header__title">房屋实录</Text>
+        <Text className="find-header__subtitle">循着生活留下的痕迹，看见屋檐真正的模样</Text>
       </View>
 
       <View className="find-search">
@@ -109,23 +115,23 @@ export default function FindPage() {
       <View className="find-list">
         {loading && (
           <View className="find-empty">
-            <Text className="find-empty__text">正在翻找屋檐故事...</Text>
+            <Text className="find-empty__text">正在翻看最近的生活切片...</Text>
           </View>
         )}
-        {!loading && rentals.length === 0 && <EmptyState onReset={handleReset} />}
-        {rentals.map((item) => (
-          <View key={item.id} className="find-list__item">
-            <RentalCard item={item} onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })} />
+        {!loading && records.length === 0 && <EmptyState onReset={handleReset} />}
+        {records.map((item) => (
+          <View key={item.rentalId} className="find-list__item">
+            <HouseRecordCard item={item} onClick={() => openTimeline(item.rentalId)} />
           </View>
         ))}
         {loadingMore && (
           <View className="find-footer">
-            <Text className="find-footer__text">继续翻找屋檐故事...</Text>
+            <Text className="find-footer__text">继续翻看更多房屋实录...</Text>
           </View>
         )}
-        {!loading && !loadingMore && !hasMore && rentals.length > 0 && (
+        {!loading && !loadingMore && !hasMore && records.length > 0 && (
           <View className="find-footer">
-            <Text className="find-footer__text">这些屋檐故事先看到这里</Text>
+            <Text className="find-footer__text">这个月的生活痕迹先看到这里</Text>
           </View>
         )}
       </View>
