@@ -1,3 +1,4 @@
+/** 前后端共享的稳定业务错误码。 */
 export const BizCode = {
   // 成功
   OK: 0,
@@ -25,11 +26,24 @@ export const BizCode = {
   SPACE_RECORD_INCOMPLETE: 1303,
   SNAPSHOT_NOT_FOUND: 1304,
   SNAPSHOT_PHOTO_NOT_PUBLIC: 1305,
+  // 每日房屋观察任务 1310-1320
+  DAILY_TASK_NOT_FOUND: 1310,
+  DAILY_TASK_EXPIRED: 1311,
+  DAILY_TASK_ALREADY_COMPLETED: 1312,
+  REPLACEMENT_LIMIT_REACHED: 1313,
+  TASK_TIMER_TOO_SHORT: 1314,
+  TASK_EVIDENCE_REQUIRED: 1315,
+  PHOTO_CHALLENGE_EXPIRED: 1316,
+  PHOTO_CONTENT_REUSED: 1317,
+  TASK_TEMPLATE_VERSION_UNAVAILABLE: 1318,
+  TASK_COMPLETION_CONFLICT: 1319,
+  DAILY_TASK_NOT_STARTED: 1320,
 
   // 聊天 1400-1499
   CONVERSATION_NOT_FOUND: 1400,
 };
 
+/** 面向用户展示的业务错误提示。 */
 export const BizMessage = {
   [BizCode.OK]: '成功',
   [BizCode.UNKNOWN]: '系统错误',
@@ -48,5 +62,16 @@ export const BizMessage = {
   [BizCode.SPACE_RECORD_INCOMPLETE]: '请先完成六个空间记录',
   [BizCode.SNAPSHOT_NOT_FOUND]: '未找到指定日期的房屋实录',
   [BizCode.SNAPSHOT_PHOTO_NOT_PUBLIC]: '照片不可公开展示',
+  [BizCode.DAILY_TASK_NOT_FOUND]: '未找到当日房屋观察任务',
+  [BizCode.DAILY_TASK_EXPIRED]: '当日房屋观察任务已过期',
+  [BizCode.DAILY_TASK_ALREADY_COMPLETED]: '当日房屋观察任务已完成',
+  [BizCode.REPLACEMENT_LIMIT_REACHED]: '今日任务更换次数已用完',
+  [BizCode.TASK_TIMER_TOO_SHORT]: '观察时长未达到任务要求',
+  [BizCode.TASK_EVIDENCE_REQUIRED]: '请先补充任务要求的观察依据',
+  [BizCode.PHOTO_CHALLENGE_EXPIRED]: '现场拍摄挑战已过期，请重新获取',
+  [BizCode.PHOTO_CONTENT_REUSED]: '该照片内容已用于其他观察记录',
+  [BizCode.TASK_TEMPLATE_VERSION_UNAVAILABLE]: '任务模板版本不可用，请重新获取任务',
+  [BizCode.TASK_COMPLETION_CONFLICT]: '任务状态已变更，请刷新后重试',
+  [BizCode.DAILY_TASK_NOT_STARTED]: '请先开始当日房屋观察任务',
   [BizCode.CONVERSATION_NOT_FOUND]: '会话不存在',
 };

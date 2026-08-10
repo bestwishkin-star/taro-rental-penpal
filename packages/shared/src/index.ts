@@ -9,3 +9,4 @@ export * from './contracts/overview';
 export * from './contracts/rental';
 export * from './contracts/user';
 export * from './contracts/house-record';
+export * from './contracts/daily-task';
