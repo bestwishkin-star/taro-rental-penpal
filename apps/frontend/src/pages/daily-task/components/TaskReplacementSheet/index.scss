@@ -1,0 +1,113 @@
+.daily-task-replacement {
+  position: fixed;
+  z-index: 50;
+  inset: 0;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(31, 25, 21, 0.42);
+  }
+
+  &__sheet {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 8px 8px 0 0;
+    background: #fffdfa;
+  }
+
+  &__title {
+    color: #302821;
+    font-size: 19px;
+    font-weight: 800;
+  }
+
+  &__hint {
+    color: #897d72;
+    font-size: 12px;
+  }
+
+  &__reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__reason {
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border: 1px solid #e5ddd4;
+    border-radius: 8px;
+    color: #62584f;
+    font-size: 13px;
+
+    &--selected {
+      border-color: #ef796d;
+      color: #8e3e38;
+      background: #fff3f0;
+
+      .daily-task-replacement__choice {
+        border-color: #ef796d;
+        background: #ef796d;
+        box-shadow: inset 0 0 0 3px #fff3f0;
+      }
+    }
+  }
+
+  &__choice {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    border: 2px solid #c7bbb0;
+    border-radius: 50%;
+  }
+
+  &__note {
+    width: 100%;
+    min-height: 82px;
+    box-sizing: border-box;
+    padding: 12px;
+    border: 1px solid #e5ddd4;
+    border-radius: 8px;
+    background: #fdfaf6;
+    font-size: 13px;
+  }
+
+  &__actions {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  &__cancel,
+  &__confirm {
+    display: flex;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  &__cancel {
+    color: #6e6258;
+    background: #f0ebe5;
+  }
+
+  &__confirm {
+    color: #fff;
+    background: #e96f63;
+  }
+}

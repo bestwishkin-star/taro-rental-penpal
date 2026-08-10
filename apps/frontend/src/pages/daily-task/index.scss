@@ -1,0 +1,80 @@
+.daily-task-page {
+  background: #f5efe6;
+
+  &.app-layout__content {
+    padding-top: 14px;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  &__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  &__primary-action,
+  &__secondary-action,
+  &__retry {
+    display: flex;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  &__primary-action {
+    grid-column: -2 / -1;
+    color: #fff;
+    background: #e96f63;
+    box-shadow: 0 8px 20px rgba(192, 82, 72, 0.18);
+
+    &--active {
+      transform: scale(0.985);
+      opacity: 0.9;
+    }
+
+    &--disabled {
+      opacity: 0.58;
+    }
+
+    &:only-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &__secondary-action {
+    color: #685d53;
+    background: #e9e1d8;
+  }
+
+  &__state {
+    display: flex;
+    min-height: 60vh;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 18px;
+    color: #7e7268;
+    font-size: 14px;
+
+    &--error {
+      color: #8a4e48;
+    }
+  }
+
+  &__retry {
+    width: 140px;
+    height: 44px;
+    color: #fff;
+    background: #e96f63;
+    font-size: 13px;
+  }
+}

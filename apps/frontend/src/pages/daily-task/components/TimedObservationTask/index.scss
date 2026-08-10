@@ -1,0 +1,51 @@
+.daily-task-timed {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+
+  &__timer {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 15px;
+    border-radius: 8px;
+    background: #edf7fb;
+  }
+
+  &__icon {
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  &__timer-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__timer-label {
+    color: #607786;
+    font-size: 12px;
+  }
+
+  &__time {
+    color: #2d5268;
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  &__track {
+    height: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    background: #dfe9ee;
+  }
+
+  &__progress {
+    height: 100%;
+    border-radius: 4px;
+    background: #63a9c7;
+    transition: width 300ms ease;
+  }
+}
