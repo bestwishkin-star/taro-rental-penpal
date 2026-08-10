@@ -101,6 +101,20 @@ function resolvePublicProjectionStatus(
     : 'PENDING';
 }
 
+/** 校验观察中模板声明的全部题目，未声明的客户端字段不会参与投影。 */
+export function validateObservationAnswers(
+  observation: RentalTaskObservation,
+  template: DailyTaskTemplate
+): void {
+  for (const question of template.questionSchema) {
+    const mapping = template.factMapping.find((item) => item.sourceKey === question.id);
+    const source = mapping?.source === 'MEASUREMENT'
+      ? observation.measurementValues
+      : observation.answers;
+    normalizeAnswer(question, source[question.id]);
+  }
+}
+
 /** 将观察限制在模板声明的字段映射白名单内并验证答案范围。 */
 export function mapObservationToFacts(
   observation: RentalTaskObservation,
@@ -109,6 +123,7 @@ export function mapObservationToFacts(
   if (observation.module !== template.module) {
     throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
   }
+  validateObservationAnswers(observation, template);
 
   return template.factMapping.map((mapping) => {
     const question = template.questionSchema.find((item) => item.id === mapping.sourceKey);

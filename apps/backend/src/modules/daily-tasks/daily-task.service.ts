@@ -1,31 +1,72 @@
 import type {
+  CompleteDailyTaskInput,
+  CompleteDailyTaskResult,
   DailyTaskActivitySummary,
   DailyTaskDetail,
-  DailyTaskTodayResponse
+  DailyTaskTodayResponse,
+  PublicProjectionStatus
 } from '@shared/contracts/daily-task';
 import { BizCode } from '@shared/errors';
+import { z } from 'zod';
 
 import { AppError } from '@/lib/errors';
+import { pool } from '@/lib/mysql';
 import { getShanghaiDate } from '@/modules/house-records/house-record-date';
 
 import { recordDailyTaskEvent } from './daily-task-events';
 import {
+  appendSnapshotActivity,
   findDailyTaskBySlot,
+  findObservationByIdempotencyKeyWithConnection,
+  findObservationByTaskIdWithConnection,
   getActivitySummary,
   getLatestSnapshotDate,
   getOwnedRentalState,
   insertDailyTask,
+  insertImmutableObservation,
   listRecentTaskHistory,
+  lockDailyTask,
+  markTaskCompleted,
   markTaskStarted,
   type DailyTaskHistoryItem,
   type DailyTaskRecord
 } from './daily-task.repository';
+import { projectObservation, readOwnerSpaceFacts } from './daily-task-projection.service';
 import { selectDailyTaskTemplate } from './daily-task.selector';
+import { replaceSnapshotFromPublicFactsWithConnection } from './daily-task-snapshot.service';
 import { DAILY_TASK_TEMPLATES } from './daily-task.templates';
-import type { DailyTaskPeriod, DailyTaskTemplate } from './daily-task.types';
+import type {
+  DailyTaskPeriod,
+  DailyTaskTemplate,
+  RentalTaskObservation
+} from './daily-task.types';
 
 /** 每日任务活跃度接口允许查询的最大天数。 */
 const MAX_ACTIVITY_DAYS = 30;
+
+/** 客户端观察时间允许领先服务端时钟的最大误差。 */
+const MAX_OBSERVED_AT_CLOCK_SKEW_MS = 5 * 60 * 1000;
+
+/** 每日任务单个答案支持的结构化值。 */
+const DAILY_TASK_ANSWER_VALUE_SCHEMA = z.union([
+  z.string().max(500),
+  z.array(z.string().max(120)).min(1).max(12),
+  z.number().finite()
+]);
+
+/** 完成任务接口的严格输入结构，拒绝客户端注入派生事实字段。 */
+const COMPLETE_DAILY_TASK_SCHEMA = z
+  .object({
+    idempotencyKey: z.string().min(8).max(64).regex(/^[A-Za-z0-9_-]+$/),
+    answers: z.record(DAILY_TASK_ANSWER_VALUE_SCHEMA),
+    measurementValues: z.record(z.number().finite()),
+    photoAssetIds: z.array(z.string().min(1).max(64)).max(6),
+    challengeId: z.string().min(1).max(64).optional(),
+    conclusionVisibility: z.enum(['PRIVATE', 'PUBLIC']),
+    photoVisibility: z.enum(['PRIVATE', 'PUBLIC']),
+    observedAt: z.string().datetime({ offset: true })
+  })
+  .strict();
 
 /** 将纯日期按 UTC 日历平移，避免服务器本地时区参与自然日计算。 */
 function shiftDate(date: string, days: number): string {
@@ -234,4 +275,187 @@ export async function readDailyTaskActivity(
   const safeDays = Math.min(MAX_ACTIVITY_DAYS, Math.max(1, Math.trunc(days)));
   const rangeEnd = getShanghaiDate(now);
   return getActivitySummary(rentalId, shiftDate(rangeEnd, -(safeDays - 1)), rangeEnd);
+}
+
+/** 严格解析完成任务输入，并收敛为共享合同类型。 */
+function parseCompleteDailyTaskInput(input: unknown): CompleteDailyTaskInput {
+  const result = COMPLETE_DAILY_TASK_SCHEMA.safeParse(input);
+  if (!result.success) throw new AppError(BizCode.INVALID_PARAMS);
+  return result.data;
+}
+
+/** 计算观察在写入时应使用的初始公开投影状态。 */
+function getInitialProjectionStatus(
+  input: CompleteDailyTaskInput,
+  template: DailyTaskTemplate
+): PublicProjectionStatus {
+  if (input.conclusionVisibility === 'PRIVATE') return 'NOT_REQUESTED';
+  return template.evidenceRequirement.requiresPhoto ? 'PENDING' : 'PUBLISHED';
+}
+
+/** 校验任务状态、上海自然日、有效期、计时时长和基础证据要求。 */
+function assertTaskCanComplete(
+  task: DailyTaskRecord,
+  template: DailyTaskTemplate,
+  input: CompleteDailyTaskInput,
+  now: Date
+): void {
+  if (task.status === 'EXPIRED' || new Date(task.expiresAt).getTime() <= now.getTime()) {
+    throw new AppError(BizCode.DAILY_TASK_EXPIRED);
+  }
+  if (task.status === 'ASSIGNED' || !task.startedAt) {
+    throw new AppError(BizCode.DAILY_TASK_NOT_STARTED);
+  }
+  if (task.status !== 'STARTED') throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+  if (task.taskDate !== getShanghaiDate(now)) throw new AppError(BizCode.DAILY_TASK_EXPIRED);
+
+  const startedAt = new Date(task.startedAt);
+  const elapsedSeconds = Math.floor((now.getTime() - startedAt.getTime()) / 1000);
+  if (elapsedSeconds < template.minimumDurationSeconds) {
+    throw new AppError(BizCode.TASK_TIMER_TOO_SHORT);
+  }
+
+  const observedAt = new Date(input.observedAt);
+  if (
+    getShanghaiDate(observedAt) !== task.taskDate ||
+    observedAt.getTime() < startedAt.getTime() - MAX_OBSERVED_AT_CLOCK_SKEW_MS ||
+    observedAt.getTime() > now.getTime() + MAX_OBSERVED_AT_CLOCK_SKEW_MS
+  ) {
+    throw new AppError(BizCode.INVALID_PARAMS);
+  }
+  if (template.evidenceRequirement.requiresPhoto && input.photoAssetIds.length === 0) {
+    throw new AppError(BizCode.TASK_EVIDENCE_REQUIRED);
+  }
+}
+
+/** 读取指定空间完成后的房主事实新鲜度。 */
+async function readCompletedModuleFreshness(
+  ownerOpenid: string,
+  rentalId: string,
+  module: RentalTaskObservation['module']
+): Promise<number> {
+  const summaries = await readOwnerSpaceFacts(ownerOpenid, rentalId);
+  return summaries.find((summary) => summary.module === module)?.freshnessPercent ?? 0;
+}
+
+/** 在单一事务中完成任务、写观察、推进事实并重建当日快照。 */
+export async function completeDailyTask(
+  ownerOpenid: string,
+  rentalId: string,
+  taskId: string,
+  rawInput: unknown,
+  now = new Date()
+): Promise<CompleteDailyTaskResult> {
+  const input = parseCompleteDailyTaskInput(rawInput);
+  await assertPublishedOwner(ownerOpenid, rentalId);
+  const connection = await pool.getConnection();
+  let completedObservation: RentalTaskObservation | null = null;
+  let updatedFactKeys: string[] = [];
+
+  try {
+    await connection.beginTransaction();
+    const task = await lockDailyTask(connection, ownerOpenid, rentalId, taskId);
+    if (!task) throw new AppError(BizCode.DAILY_TASK_NOT_FOUND);
+    const template = task.template ?? findTemplate(task.templateId, task.templateVersion);
+    if (!template) throw new AppError(BizCode.TASK_TEMPLATE_VERSION_UNAVAILABLE);
+
+    // 在任务锁内再次读取幂等键，保证并发重试不会插入第二条观察。
+    const idempotentObservation = await findObservationByIdempotencyKeyWithConnection(
+      connection,
+      ownerOpenid,
+      input.idempotencyKey
+    );
+    if (idempotentObservation) {
+      if (
+        idempotentObservation.taskId !== taskId ||
+        idempotentObservation.rentalId !== rentalId
+      ) {
+        throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+      }
+      completedObservation = idempotentObservation;
+      updatedFactKeys = template.factMapping.map((mapping) => mapping.factKey);
+      await connection.commit();
+    } else {
+      if (task.status === 'COMPLETED') {
+        await findObservationByTaskIdWithConnection(connection, task.id);
+        throw new AppError(BizCode.DAILY_TASK_ALREADY_COMPLETED);
+      }
+      assertTaskCanComplete(task, template, input, now);
+
+      const hasPhotos = input.photoAssetIds.length > 0;
+      const initialProjectionStatus = getInitialProjectionStatus(input, template);
+      const observation = await insertImmutableObservation(connection, {
+        taskId: task.id,
+        rentalId: task.rentalId,
+        ownerOpenid: task.ownerOpenid,
+        module: template.module,
+        taskDate: task.taskDate,
+        idempotencyKey: input.idempotencyKey,
+        answers: input.answers,
+        measurementValues: input.measurementValues,
+        photoAssetIds: input.photoAssetIds,
+        conclusionVisibility: input.conclusionVisibility,
+        photoVisibility: input.photoVisibility,
+        integrityStatus: 'PASSED',
+        safetyStatus: hasPhotos ? 'PENDING' : 'UNCHECKED',
+        householdStatus: hasPhotos ? 'PENDING' : 'UNCHECKED',
+        publicProjectionStatus: initialProjectionStatus,
+        observedAt: input.observedAt
+      });
+      const projection = await projectObservation(observation, template, connection);
+      const snapshot = await replaceSnapshotFromPublicFactsWithConnection(connection, {
+        rentalId: task.rentalId,
+        ownerOpenid: task.ownerOpenid,
+        snapshotDate: task.taskDate,
+        source: 'RANDOM_TASK'
+      });
+      await appendSnapshotActivity(connection, {
+        snapshotId: snapshot.snapshotId,
+        rentalId: task.rentalId,
+        activityDate: task.taskDate,
+        visibility: input.conclusionVisibility,
+        module: template.module,
+        taskId: task.id,
+        projectionStatus: projection.publicProjectionStatus
+      });
+      const completed = await markTaskCompleted(connection, task.id, now);
+      if (!completed) throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+
+      await connection.commit();
+      completedObservation = {
+        ...observation,
+        publicProjectionStatus: projection.publicProjectionStatus
+      };
+      updatedFactKeys = projection.ownerFactKeys;
+      recordDailyTaskEvent('daily_task_completed', {
+        rentalId,
+        taskId,
+        templateId: template.id,
+        factCount: updatedFactKeys.length,
+        status: 'COMPLETED'
+      });
+    }
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+
+  if (!completedObservation) {
+    throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+  }
+  const freshnessPercent = await readCompletedModuleFreshness(
+    ownerOpenid,
+    rentalId,
+    completedObservation.module
+  );
+  return {
+    taskId: completedObservation.taskId,
+    snapshotDate: completedObservation.taskDate,
+    updatedModule: completedObservation.module,
+    updatedFactKeys,
+    freshnessPercent,
+    publicProjectionStatus: completedObservation.publicProjectionStatus
+  };
 }

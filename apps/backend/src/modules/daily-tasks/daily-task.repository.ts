@@ -7,7 +7,9 @@ import type {
 } from '@shared/contracts/daily-task';
 import {
   HOUSE_MODULE_IDS,
-  type HouseModuleId
+  type HouseModuleId,
+  type PhotoHouseholdStatus,
+  type PhotoSafetyStatus
 } from '@shared/contracts/rental-space';
 import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
@@ -19,7 +21,8 @@ import type {
   DailyTaskCandidateSnapshot,
   DailyTaskIntegrityStatus,
   DailyTaskSelection,
-  DailyTaskTemplate
+  DailyTaskTemplate,
+  RentalTaskObservation
 } from './daily-task.types';
 
 /** 房屋所有权与发布状态，未找到的房屋按无所有权处理，避免泄露房屋是否存在。 */
@@ -130,6 +133,27 @@ interface SpaceFactHeadRow extends RowDataPacket {
   observed_at: Date | string;
 }
 
+/** 不可变观察查询返回的数据库行。 */
+interface RentalTaskObservationRow extends RowDataPacket {
+  id: string;
+  task_id: string;
+  rental_id: string;
+  owner_openid: string;
+  module_type: HouseModuleId;
+  task_date: string;
+  idempotency_key: string;
+  answers: string | RentalTaskObservation['answers'];
+  measurement_values: string | RentalTaskObservation['measurementValues'];
+  photo_asset_ids: string | string[];
+  conclusion_visibility: DailyTaskVisibility;
+  photo_visibility: DailyTaskVisibility;
+  integrity_status: DailyTaskIntegrityStatus;
+  safety_status: PhotoSafetyStatus;
+  household_status: PhotoHouseholdStatus;
+  public_projection_status: PublicProjectionStatus;
+  observed_at: Date | string;
+}
+
 /** 新增不可变事实值所需参数。 */
 export interface InsertSpaceFactValueInput {
   rentalId: string;
@@ -161,6 +185,20 @@ export interface SpaceFactHeadRecord {
   observedAt: string;
 }
 
+/** 创建不可变观察时由 Repository 生成主键。 */
+export type InsertTaskObservationInput = Omit<RentalTaskObservation, 'id'>;
+
+/** 追加随机任务快照活动所需参数。 */
+export interface AppendSnapshotActivityInput {
+  snapshotId: string;
+  rentalId: string;
+  activityDate: string;
+  visibility: DailyTaskVisibility;
+  module: HouseModuleId;
+  taskId: string;
+  projectionStatus: PublicProjectionStatus;
+}
+
 /** 任务详情查询复用的字段和公开投影关联片段。 */
 const TASK_SELECT = `
   SELECT t.id,
@@ -182,6 +220,27 @@ const TASK_SELECT = `
          COALESCE(o.public_projection_status, 'NOT_REQUESTED') AS public_projection_status
   FROM rental_daily_tasks t
   LEFT JOIN rental_task_observations o ON o.task_id = t.id`;
+
+/** 锁定任务时避免外连接，只读取完成事务所需的任务实例字段。 */
+const LOCKING_TASK_SELECT = `
+  SELECT t.id,
+         t.rental_id,
+         t.owner_openid,
+         DATE_FORMAT(t.task_date, '%Y-%m-%d') AS task_date,
+         t.slot,
+         t.template_id,
+         t.template_version,
+         t.status,
+         t.assignment_reason,
+         t.weight_snapshot,
+         t.replacement_reason,
+         t.replacement_note,
+         t.parent_task_id,
+         t.started_at,
+         t.expires_at,
+         t.completed_at,
+         'NOT_REQUESTED' AS public_projection_status
+  FROM rental_daily_tasks t`;
 
 /** 安全解析 JSON 列，损坏的历史快照降级为空候选列表。 */
 function parseWeightSnapshot(value: DailyTaskRow['weight_snapshot']): DailyTaskCandidateSnapshot[] {
@@ -253,6 +312,39 @@ function mapSpaceFactHeadRow(row: SpaceFactHeadRow): SpaceFactHeadRecord {
     key: row.fact_key,
     label: row.fact_label,
     value: parseFactValue(row.normalized_value),
+    observedAt: new Date(row.observed_at).toISOString()
+  };
+}
+
+/** 安全解析数据库 JSON 字段，损坏数据使用调用方提供的空值降级。 */
+function parseJsonValue<T>(value: string | T, fallback: T): T {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+/** 将不可变观察数据库行映射为领域记录。 */
+function mapTaskObservationRow(row: RentalTaskObservationRow): RentalTaskObservation {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    rentalId: row.rental_id,
+    ownerOpenid: row.owner_openid,
+    module: row.module_type,
+    taskDate: row.task_date,
+    idempotencyKey: row.idempotency_key,
+    answers: parseJsonValue(row.answers, {}),
+    measurementValues: parseJsonValue(row.measurement_values, {}),
+    photoAssetIds: parseJsonValue(row.photo_asset_ids, []),
+    conclusionVisibility: row.conclusion_visibility,
+    photoVisibility: row.photo_visibility,
+    integrityStatus: row.integrity_status,
+    safetyStatus: row.safety_status,
+    householdStatus: row.household_status,
+    publicProjectionStatus: row.public_projection_status,
     observedAt: new Date(row.observed_at).toISOString()
   };
 }
@@ -537,4 +629,154 @@ export async function listPublicSpaceFactHeadsWithConnection(
     [rentalId]
   );
   return rows.map(mapSpaceFactHeadRow);
+}
+
+/** 在事务中锁定指定房主的任务实例，避免并发完成产生重复观察。 */
+export async function lockDailyTask(
+  connection: PoolConnection,
+  ownerOpenid: string,
+  rentalId: string,
+  taskId: string
+): Promise<DailyTaskRecord | null> {
+  const [rows] = await connection.execute<DailyTaskRow[]>(
+    `${LOCKING_TASK_SELECT}
+     WHERE t.id = ? AND t.rental_id = ? AND t.owner_openid = ?
+     LIMIT 1
+     FOR UPDATE`,
+    [taskId, rentalId, ownerOpenid]
+  );
+  return rows[0] ? mapDailyTaskRow(rows[0]) : null;
+}
+
+/** 在事务外快速回读同一房主的幂等完成记录。 */
+export async function findObservationByIdempotencyKey(
+  ownerOpenid: string,
+  idempotencyKey: string
+): Promise<RentalTaskObservation | null> {
+  const [rows] = await pool.execute<RentalTaskObservationRow[]>(
+    `SELECT id, task_id, rental_id, owner_openid, module_type,
+            DATE_FORMAT(task_date, '%Y-%m-%d') AS task_date,
+            idempotency_key, answers, measurement_values, photo_asset_ids,
+            conclusion_visibility, photo_visibility, integrity_status, safety_status,
+            household_status, public_projection_status, observed_at
+     FROM rental_task_observations
+     WHERE owner_openid = ? AND idempotency_key = ?
+     LIMIT 1`,
+    [ownerOpenid, idempotencyKey]
+  );
+  return rows[0] ? mapTaskObservationRow(rows[0]) : null;
+}
+
+/** 在调用方事务中按幂等键锁定既有观察。 */
+export async function findObservationByIdempotencyKeyWithConnection(
+  connection: PoolConnection,
+  ownerOpenid: string,
+  idempotencyKey: string
+): Promise<RentalTaskObservation | null> {
+  const [rows] = await connection.execute<RentalTaskObservationRow[]>(
+    `SELECT id, task_id, rental_id, owner_openid, module_type,
+            DATE_FORMAT(task_date, '%Y-%m-%d') AS task_date,
+            idempotency_key, answers, measurement_values, photo_asset_ids,
+            conclusion_visibility, photo_visibility, integrity_status, safety_status,
+            household_status, public_projection_status, observed_at
+     FROM rental_task_observations
+     WHERE owner_openid = ? AND idempotency_key = ?
+     LIMIT 1
+     FOR UPDATE`,
+    [ownerOpenid, idempotencyKey]
+  );
+  return rows[0] ? mapTaskObservationRow(rows[0]) : null;
+}
+
+/** 在调用方事务中按任务读取唯一观察，处理已完成任务的重复请求。 */
+export async function findObservationByTaskIdWithConnection(
+  connection: PoolConnection,
+  taskId: string
+): Promise<RentalTaskObservation | null> {
+  const [rows] = await connection.execute<RentalTaskObservationRow[]>(
+    `SELECT id, task_id, rental_id, owner_openid, module_type,
+            DATE_FORMAT(task_date, '%Y-%m-%d') AS task_date,
+            idempotency_key, answers, measurement_values, photo_asset_ids,
+            conclusion_visibility, photo_visibility, integrity_status, safety_status,
+            household_status, public_projection_status, observed_at
+     FROM rental_task_observations
+     WHERE task_id = ?
+     LIMIT 1
+     FOR UPDATE`,
+    [taskId]
+  );
+  return rows[0] ? mapTaskObservationRow(rows[0]) : null;
+}
+
+/** 在调用方事务中写入不可变观察，所有 DATETIME 参数使用 Date 对象。 */
+export async function insertImmutableObservation(
+  connection: PoolConnection,
+  input: InsertTaskObservationInput
+): Promise<RentalTaskObservation> {
+  const id = generateId();
+  await connection.execute<ResultSetHeader>(
+    `INSERT INTO rental_task_observations
+      (id, task_id, rental_id, owner_openid, module_type, task_date, idempotency_key,
+       answers, measurement_values, photo_asset_ids, conclusion_visibility, photo_visibility,
+       integrity_status, safety_status, household_status, public_projection_status, observed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.taskId,
+      input.rentalId,
+      input.ownerOpenid,
+      input.module,
+      input.taskDate,
+      input.idempotencyKey,
+      JSON.stringify(input.answers),
+      JSON.stringify(input.measurementValues),
+      JSON.stringify(input.photoAssetIds),
+      input.conclusionVisibility,
+      input.photoVisibility,
+      input.integrityStatus,
+      input.safetyStatus,
+      input.householdStatus,
+      input.publicProjectionStatus,
+      new Date(input.observedAt)
+    ]
+  );
+  return { id, ...input };
+}
+
+/** 在调用方事务中追加一次快照活动，任务唯一索引避免重复节点来源。 */
+export async function appendSnapshotActivity(
+  connection: PoolConnection,
+  input: AppendSnapshotActivityInput
+): Promise<void> {
+  await connection.execute<ResultSetHeader>(
+    `INSERT INTO rental_snapshot_activities
+      (id, snapshot_id, rental_id, activity_date, source, visibility,
+       module_type, task_id, projection_status)
+     VALUES (?, ?, ?, ?, 'RANDOM_TASK', ?, ?, ?, ?)`,
+    [
+      generateId(),
+      input.snapshotId,
+      input.rentalId,
+      input.activityDate,
+      input.visibility,
+      input.module,
+      input.taskId,
+      input.projectionStatus
+    ]
+  );
+}
+
+/** 将已锁定任务原子标记为完成，仅 STARTED 状态允许推进。 */
+export async function markTaskCompleted(
+  connection: PoolConnection,
+  taskId: string,
+  completedAt: Date
+): Promise<boolean> {
+  const [result] = await connection.execute<ResultSetHeader>(
+    `UPDATE rental_daily_tasks
+     SET status = 'COMPLETED', completed_at = ?
+     WHERE id = ? AND status = 'STARTED'`,
+    [completedAt, taskId]
+  );
+  return result.affectedRows === 1;
 }
