@@ -327,7 +327,6 @@ CREATE TABLE IF NOT EXISTS rental_daily_tasks (
   created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
   UNIQUE KEY uk_daily_task_rental_date_slot (rental_id, task_date, slot),
-  UNIQUE KEY uk_daily_task_owner_date_slot (owner_openid, task_date, slot),
   KEY idx_daily_task_template_history (rental_id, template_id, task_date)
 );
 
