@@ -200,14 +200,19 @@ CREATE TABLE IF NOT EXISTS rental_space_photos (
 CREATE TABLE IF NOT EXISTS photo_capture_challenges (
   id VARCHAR(36) PRIMARY KEY,
   user_openid VARCHAR(64) NOT NULL,
-  draft_id VARCHAR(36) NOT NULL,
+  draft_id VARCHAR(36),
+  daily_task_id VARCHAR(36),
+  template_version INT,
   module_type VARCHAR(32) NOT NULL,
   prompt VARCHAR(500) NOT NULL,
   expires_at DATETIME NOT NULL,
   used_at DATETIME,
   created_at DATETIME NOT NULL DEFAULT NOW(),
   INDEX idx_capture_challenge_owner (user_openid, draft_id, module_type, expires_at),
-  INDEX idx_capture_challenge_expiry (expires_at, used_at)
+  INDEX idx_capture_challenge_expiry (expires_at, used_at),
+  INDEX idx_capture_challenge_daily_task (daily_task_id, expires_at, used_at),
+  CONSTRAINT chk_capture_challenge_single_owner
+    CHECK ((draft_id IS NOT NULL) <> (daily_task_id IS NOT NULL))
 );
 
 CREATE TABLE IF NOT EXISTS rental_residency_checkins (
@@ -274,4 +279,121 @@ CREATE TABLE IF NOT EXISTS rental_public_snapshot_photos (
   sort_order INT UNSIGNED NOT NULL,
   created_at DATETIME NOT NULL DEFAULT NOW(),
   UNIQUE KEY uk_snapshot_space_photo (snapshot_space_id, photo_asset_id)
+);
+
+-- 每日房屋观察任务模板采用版本化联合主键，已发布版本只追加不覆盖。
+CREATE TABLE IF NOT EXISTS rental_daily_task_templates (
+  id VARCHAR(36) NOT NULL,
+  version INT NOT NULL,
+  generator_type ENUM('RULE', 'AI') NOT NULL DEFAULT 'RULE',
+  generator_version VARCHAR(32) NOT NULL,
+  policy_version VARCHAR(32) NOT NULL,
+  module_type VARCHAR(32) NOT NULL,
+  task_type VARCHAR(32) NOT NULL,
+  title VARCHAR(120) NOT NULL,
+  prompt VARCHAR(500) NOT NULL,
+  explanation_template VARCHAR(500) NOT NULL,
+  estimated_seconds INT NOT NULL,
+  allowed_periods JSON NOT NULL,
+  evidence_requirement JSON NOT NULL,
+  question_schema JSON NOT NULL,
+  fact_mapping JSON NOT NULL,
+  cooldown_days INT NOT NULL DEFAULT 14,
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id, version),
+  KEY idx_daily_template_active (active, module_type, task_type)
+);
+
+-- 每日任务通过房屋、房主、自然日和槽位唯一约束防止并发重复分配。
+CREATE TABLE IF NOT EXISTS rental_daily_tasks (
+  id VARCHAR(36) PRIMARY KEY,
+  rental_id VARCHAR(36) NOT NULL,
+  owner_openid VARCHAR(64) NOT NULL,
+  task_date DATE NOT NULL,
+  slot TINYINT NOT NULL,
+  template_id VARCHAR(36) NOT NULL,
+  template_version INT NOT NULL,
+  status VARCHAR(24) NOT NULL,
+  assignment_reason VARCHAR(500) NOT NULL,
+  weight_snapshot JSON NOT NULL,
+  replacement_reason VARCHAR(32),
+  replacement_note VARCHAR(200),
+  parent_task_id VARCHAR(36),
+  started_at DATETIME(3),
+  expires_at DATETIME(3) NOT NULL,
+  completed_at DATETIME(3),
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_daily_task_rental_date_slot (rental_id, task_date, slot),
+  UNIQUE KEY uk_daily_task_owner_date_slot (owner_openid, task_date, slot),
+  KEY idx_daily_task_template_history (rental_id, template_id, task_date)
+);
+
+-- 任务观察是不可变事实来源，任务唯一键和客户端幂等键共同阻止重复写入。
+CREATE TABLE IF NOT EXISTS rental_task_observations (
+  id VARCHAR(36) PRIMARY KEY,
+  task_id VARCHAR(36) NOT NULL,
+  rental_id VARCHAR(36) NOT NULL,
+  owner_openid VARCHAR(64) NOT NULL,
+  module_type VARCHAR(32) NOT NULL,
+  task_date DATE NOT NULL,
+  idempotency_key VARCHAR(64) NOT NULL,
+  answers JSON NOT NULL,
+  measurement_values JSON NOT NULL,
+  photo_asset_ids JSON NOT NULL,
+  conclusion_visibility VARCHAR(16) NOT NULL,
+  photo_visibility VARCHAR(16) NOT NULL,
+  integrity_status VARCHAR(24) NOT NULL,
+  safety_status VARCHAR(24) NOT NULL,
+  household_status VARCHAR(24) NOT NULL,
+  public_projection_status VARCHAR(24) NOT NULL,
+  observed_at DATETIME(3) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_task_observation_task (task_id),
+  UNIQUE KEY uk_task_observation_idempotency (owner_openid, idempotency_key)
+);
+
+-- 字段级事实值只追加，用于重建任意时间点的房屋状态。
+CREATE TABLE IF NOT EXISTS rental_space_fact_values (
+  id VARCHAR(36) PRIMARY KEY,
+  rental_id VARCHAR(36) NOT NULL,
+  module_type VARCHAR(32) NOT NULL,
+  fact_key VARCHAR(96) NOT NULL,
+  fact_label VARCHAR(120) NOT NULL,
+  normalized_value JSON NOT NULL,
+  source_observation_id VARCHAR(36) NOT NULL,
+  visibility VARCHAR(16) NOT NULL,
+  integrity_status VARCHAR(24) NOT NULL,
+  observed_at DATETIME(3) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  KEY idx_fact_value_rental_module (rental_id, module_type, fact_key)
+);
+
+-- owner/public 双指针分别支撑房主当前模型与公开模型。
+CREATE TABLE IF NOT EXISTS rental_space_fact_heads (
+  rental_id VARCHAR(36) NOT NULL,
+  module_type VARCHAR(32) NOT NULL,
+  fact_key VARCHAR(96) NOT NULL,
+  owner_fact_value_id VARCHAR(36) NOT NULL,
+  public_fact_value_id VARCHAR(36),
+  updated_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  PRIMARY KEY (rental_id, module_type, fact_key)
+);
+
+-- 快照活动保留同一天的多个更新来源，并确保每日任务活动不会重复生成。
+CREATE TABLE IF NOT EXISTS rental_snapshot_activities (
+  id VARCHAR(36) PRIMARY KEY,
+  snapshot_id VARCHAR(36) NOT NULL,
+  rental_id VARCHAR(36) NOT NULL,
+  activity_date DATE NOT NULL,
+  source VARCHAR(32) NOT NULL,
+  visibility VARCHAR(16) NOT NULL,
+  module_type VARCHAR(32),
+  task_id VARCHAR(36),
+  projection_status VARCHAR(24) NOT NULL,
+  created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  UNIQUE KEY uk_snapshot_activity_task (task_id),
+  KEY idx_snapshot_activity_timeline (rental_id, activity_date)
 );
