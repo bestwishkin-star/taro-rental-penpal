@@ -1,13 +1,15 @@
 import type {
+  DailyTaskAnswerValue,
   DailyTaskActivitySummary,
   DailyTaskStatus,
+  DailyTaskVisibility,
   PublicProjectionStatus
 } from '@shared/contracts/daily-task';
 import {
   HOUSE_MODULE_IDS,
   type HouseModuleId
 } from '@shared/contracts/rental-space';
-import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
@@ -15,6 +17,7 @@ import { generateId } from '@/lib/snowflake';
 import { DAILY_TASK_TEMPLATES } from './daily-task.templates';
 import type {
   DailyTaskCandidateSnapshot,
+  DailyTaskIntegrityStatus,
   DailyTaskSelection,
   DailyTaskTemplate
 } from './daily-task.types';
@@ -118,6 +121,46 @@ interface LatestSnapshotRow extends RowDataPacket {
   latest_snapshot_date: string | null;
 }
 
+/** 当前事实头及其指向值的数据库行。 */
+interface SpaceFactHeadRow extends RowDataPacket {
+  module_type: HouseModuleId;
+  fact_key: string;
+  fact_label: string;
+  normalized_value: string | DailyTaskAnswerValue;
+  observed_at: Date | string;
+}
+
+/** 新增不可变事实值所需参数。 */
+export interface InsertSpaceFactValueInput {
+  rentalId: string;
+  module: HouseModuleId;
+  key: string;
+  label: string;
+  value: DailyTaskAnswerValue;
+  sourceObservationId: string;
+  visibility: DailyTaskVisibility;
+  integrityStatus: DailyTaskIntegrityStatus;
+  observedAt: string;
+}
+
+/** 推进同一房屋空间字段双指针所需参数。 */
+export interface UpsertSpaceFactHeadInput {
+  rentalId: string;
+  module: HouseModuleId;
+  key: string;
+  ownerFactValueId: string;
+  publicFactValueId?: string;
+}
+
+/** 房主或公开投影读取的当前字段事实。 */
+export interface SpaceFactHeadRecord {
+  module: HouseModuleId;
+  key: string;
+  label: string;
+  value: DailyTaskAnswerValue;
+  observedAt: string;
+}
+
 /** 任务详情查询复用的字段和公开投影关联片段。 */
 const TASK_SELECT = `
   SELECT t.id,
@@ -191,6 +234,27 @@ function mapDailyTaskRow(row: DailyTaskRow): DailyTaskRecord {
 /** 判断数据库中的空间标识是否属于共享合同允许值。 */
 function isHouseModuleId(value: string): value is HouseModuleId {
   return HOUSE_MODULE_IDS.some((module) => module === value);
+}
+
+/** 安全解析 JSON 事实值，异常数据降级为空字符串供展示层识别。 */
+function parseFactValue(value: SpaceFactHeadRow['normalized_value']): DailyTaskAnswerValue {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value) as DailyTaskAnswerValue;
+  } catch {
+    return '';
+  }
+}
+
+/** 将事实头数据库行映射为领域记录。 */
+function mapSpaceFactHeadRow(row: SpaceFactHeadRow): SpaceFactHeadRecord {
+  return {
+    module: row.module_type,
+    key: row.fact_key,
+    label: row.fact_label,
+    value: parseFactValue(row.normalized_value),
+    observedAt: new Date(row.observed_at).toISOString()
+  };
 }
 
 /** 区分无所有权与房屋尚未公开，供 Service 映射不同业务错误。 */
@@ -387,4 +451,90 @@ export async function getLatestSnapshotDate(rentalId: string): Promise<string | 
     [rentalId]
   );
   return rows[0]?.latest_snapshot_date ?? undefined;
+}
+
+/** 在调用方事务中追加一条不可变事实值并返回其主键。 */
+export async function insertSpaceFactValue(
+  connection: PoolConnection,
+  input: InsertSpaceFactValueInput
+): Promise<string> {
+  const id = generateId();
+  await connection.execute<ResultSetHeader>(
+    `INSERT INTO rental_space_fact_values
+      (id, rental_id, module_type, fact_key, fact_label, normalized_value,
+       source_observation_id, visibility, integrity_status, observed_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      id,
+      input.rentalId,
+      input.module,
+      input.key,
+      input.label,
+      JSON.stringify(input.value),
+      input.sourceObservationId,
+      input.visibility,
+      input.integrityStatus,
+      new Date(input.observedAt)
+    ]
+  );
+  return id;
+}
+
+/** 原子推进房主事实头，并仅在明确传入公开值时推进公开事实头。 */
+export async function upsertSpaceFactHead(
+  connection: PoolConnection,
+  input: UpsertSpaceFactHeadInput
+): Promise<void> {
+  await connection.execute<ResultSetHeader>(
+    `INSERT INTO rental_space_fact_heads
+      (rental_id, module_type, fact_key, owner_fact_value_id, public_fact_value_id)
+     VALUES (?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       owner_fact_value_id = VALUES(owner_fact_value_id),
+       public_fact_value_id = COALESCE(VALUES(public_fact_value_id), public_fact_value_id)`,
+    [
+      input.rentalId,
+      input.module,
+      input.key,
+      input.ownerFactValueId,
+      input.publicFactValueId ?? null
+    ]
+  );
+}
+
+/** 读取指定房屋所有 owner head 当前事实，不包含原始答案和照片。 */
+export async function listOwnerSpaceFactHeads(rentalId: string): Promise<SpaceFactHeadRecord[]> {
+  const [rows] = await pool.execute<SpaceFactHeadRow[]>(
+    `SELECT value.module_type,
+            value.fact_key,
+            value.fact_label,
+            value.normalized_value,
+            value.observed_at
+     FROM rental_space_fact_heads head
+     INNER JOIN rental_space_fact_values value ON value.id = head.owner_fact_value_id
+     WHERE head.rental_id = ?
+     ORDER BY value.module_type, value.fact_key`,
+    [rentalId]
+  );
+  return rows.map(mapSpaceFactHeadRow);
+}
+
+/** 在调用方事务中读取公开事实头，供同日快照重建使用。 */
+export async function listPublicSpaceFactHeadsWithConnection(
+  connection: PoolConnection,
+  rentalId: string
+): Promise<SpaceFactHeadRecord[]> {
+  const [rows] = await connection.execute<SpaceFactHeadRow[]>(
+    `SELECT value.module_type,
+            value.fact_key,
+            value.fact_label,
+            value.normalized_value,
+            value.observed_at
+     FROM rental_space_fact_heads head
+     INNER JOIN rental_space_fact_values value ON value.id = head.public_fact_value_id
+     WHERE head.rental_id = ?
+     ORDER BY value.module_type, value.fact_key`,
+    [rentalId]
+  );
+  return rows.map(mapSpaceFactHeadRow);
 }

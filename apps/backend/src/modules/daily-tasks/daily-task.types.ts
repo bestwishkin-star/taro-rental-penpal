@@ -1,5 +1,15 @@
-import type { DailyTaskQuestion, DailyTaskType } from '@shared/contracts/daily-task';
-import type { HouseModuleId } from '@shared/contracts/rental-space';
+import type {
+  DailyTaskAnswerValue,
+  DailyTaskQuestion,
+  DailyTaskType,
+  DailyTaskVisibility,
+  PublicProjectionStatus
+} from '@shared/contracts/daily-task';
+import type {
+  HouseModuleId,
+  PhotoHouseholdStatus,
+  PhotoSafetyStatus
+} from '@shared/contracts/rental-space';
 
 /** 每日任务可执行的粗粒度时段，避免记录用户精确作息。 */
 export type DailyTaskPeriod = 'MORNING' | 'DAYTIME' | 'EVENING' | 'LATE_NIGHT';
@@ -72,4 +82,35 @@ export interface DailyTaskSelection {
   template: DailyTaskTemplate;
   assignmentReason: string;
   candidates: DailyTaskCandidateSnapshot[];
+}
+
+/** 观察结构完整性状态，与图片异步审核状态相互独立。 */
+export type DailyTaskIntegrityStatus = 'PENDING' | 'PASSED' | 'REJECTED';
+
+/** 完成任务后写入且不再修改的原始观察记录。 */
+export interface RentalTaskObservation {
+  id: string;
+  taskId: string;
+  rentalId: string;
+  ownerOpenid: string;
+  module: HouseModuleId;
+  taskDate: string;
+  idempotencyKey: string;
+  answers: Record<string, DailyTaskAnswerValue>;
+  measurementValues: Record<string, number>;
+  photoAssetIds: string[];
+  conclusionVisibility: DailyTaskVisibility;
+  photoVisibility: DailyTaskVisibility;
+  integrityStatus: DailyTaskIntegrityStatus;
+  safetyStatus: PhotoSafetyStatus;
+  householdStatus: PhotoHouseholdStatus;
+  publicProjectionStatus: PublicProjectionStatus;
+  observedAt: string;
+}
+
+/** 经过模板白名单校验后允许持久化的字段级事实。 */
+export interface NormalizedFactValue {
+  key: string;
+  label: string;
+  value: DailyTaskAnswerValue;
 }
