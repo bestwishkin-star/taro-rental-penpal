@@ -8,6 +8,13 @@ import type {
 /** 公开快照的生成来源，为后续随机任务和系统迁移预留稳定枚举。 */
 export type RentalSnapshotSource = 'MANUAL_UPDATE' | 'RANDOM_TASK' | 'SYSTEM';
 
+/** 成长树节点对当前查看者可见的观察活动状态。 */
+export type HouseRecordActivityState =
+  | 'PUBLIC_UPDATE'
+  | 'PRIVATE_ACTIVITY'
+  | 'REVIEW_PENDING'
+  | 'REVIEW_REJECTED_OWNER_ONLY';
+
 /** 公开页面允许展示的房主身份摘要，不包含 openid 等内部标识。 */
 export interface HouseRecordAuthor {
   nickname: string;
@@ -31,7 +38,9 @@ export interface HouseRecordListing {
 export interface HouseRecordTimelineNode {
   snapshotDate: string;
   source: RentalSnapshotSource;
+  activityState: HouseRecordActivityState;
   updatedModules: HouseModuleId[];
+  hasPrivateActivity: boolean;
   contentPreview?: string;
   coverPhoto?: string;
   isLatest: boolean;

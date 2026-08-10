@@ -22,6 +22,15 @@ import {
   listTimelineSnapshots
 } from './house-record.repository';
 import { publishCurrentHouseRecord } from './house-record-snapshot.service';
+import {
+  isHouseRecordOwner,
+  listTimelineActivities
+} from './house-record-activity.repository';
+
+vi.mock('./house-record-activity.repository', () => ({
+  isHouseRecordOwner: vi.fn(),
+  listTimelineActivities: vi.fn()
+}));
 
 vi.mock('./house-record.repository', () => ({
   countRecentSnapshots: vi.fn(),
@@ -44,7 +53,11 @@ vi.mock('./house-record-snapshot.service', () => ({
 
 /** 房屋实录公开读取与房主更新的服务层行为测试。 */
 describe('house-record.service', () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(listTimelineActivities).mockResolvedValue([]);
+    vi.mocked(isHouseRecordOwner).mockResolvedValue(false);
+  });
 
   it('一次批量查询补齐发现列表的近 30 天更新次数和可信标签', async () => {
     vi.mocked(listLatestPublicSnapshots).mockResolvedValue([
@@ -126,6 +139,98 @@ describe('house-record.service', () => {
     expect(result.nodes[0]?.isLatest).toBe(true);
     expect(result.rangeStart).toBe('2026-07-08');
     expect(result.rangeEnd).toBe('2026-08-06');
+  });
+
+  it('私密活动只暴露匿名节点状态', async () => {
+    vi.mocked(getPublicHouseRecordSummary).mockResolvedValue({
+      rentalId: 'rental-1',
+      title: '窗边的日常',
+      nickname: '阿禾',
+      avatar: ''
+    });
+    vi.mocked(listTimelineSnapshots).mockResolvedValue([
+      {
+        snapshotId: 'snapshot-1',
+        snapshotDate: '2026-08-10',
+        source: 'RANDOM_TASK',
+        contentPreview: '此前公开内容',
+        coverPhoto: 'https://example.com/public.jpg'
+      }
+    ]);
+    vi.mocked(listTimelineModules).mockResolvedValue(
+      new Map([['snapshot-1', ['kitchen', 'bathroom', 'living', 'bedroom', 'hallway', 'neighborhood']]])
+    );
+    vi.mocked(listTimelineActivities).mockResolvedValue([
+      {
+        snapshotDate: '2026-08-10',
+        source: 'RANDOM_TASK',
+        visibility: 'PRIVATE',
+        module: 'bedroom',
+        projectionStatus: 'NOT_REQUESTED'
+      }
+    ]);
+    vi.mocked(getBatchTrustLabels).mockResolvedValue(new Map([['rental-1', []]]));
+
+    const result = await readHouseRecordTimeline(
+      'rental-1',
+      30,
+      new Date('2026-08-10T08:00:00.000Z')
+    );
+
+    expect(result.nodes[0]).toMatchObject({
+      activityState: 'PRIVATE_ACTIVITY',
+      updatedModules: [],
+      hasPrivateActivity: true
+    });
+    expect(result.nodes[0]).not.toHaveProperty('privateChangeCount');
+    expect(result.nodes[0]).not.toHaveProperty('contentPreview');
+    expect(result.nodes[0]).not.toHaveProperty('coverPhoto');
+  });
+
+  it('审核拒绝状态只向房主展示', async () => {
+    vi.mocked(getPublicHouseRecordSummary).mockResolvedValue({
+      rentalId: 'rental-1',
+      title: '窗边的日常',
+      nickname: '阿禾',
+      avatar: ''
+    });
+    vi.mocked(listTimelineSnapshots).mockResolvedValue([
+      {
+        snapshotId: 'snapshot-1',
+        snapshotDate: '2026-08-10',
+        source: 'RANDOM_TASK',
+        contentPreview: undefined,
+        coverPhoto: undefined
+      }
+    ]);
+    vi.mocked(listTimelineModules).mockResolvedValue(new Map([['snapshot-1', ['kitchen']]]));
+    vi.mocked(listTimelineActivities).mockResolvedValue([
+      {
+        snapshotDate: '2026-08-10',
+        source: 'RANDOM_TASK',
+        visibility: 'PUBLIC',
+        module: 'kitchen',
+        projectionStatus: 'REJECTED'
+      }
+    ]);
+    vi.mocked(getBatchTrustLabels).mockResolvedValue(new Map([['rental-1', []]]));
+
+    const publicResult = await readHouseRecordTimeline(
+      'rental-1',
+      30,
+      new Date('2026-08-10T08:00:00.000Z')
+    );
+    vi.mocked(isHouseRecordOwner).mockResolvedValue(true);
+    const ownerResult = await readHouseRecordTimeline(
+      'rental-1',
+      30,
+      new Date('2026-08-10T08:00:00.000Z'),
+      'owner-1'
+    );
+
+    expect(publicResult.nodes[0]?.activityState).toBe('PRIVATE_ACTIVITY');
+    expect(ownerResult.nodes[0]?.activityState).toBe('REVIEW_REJECTED_OWNER_ONLY');
+    expect(ownerResult.nodes[0]?.updatedModules).toEqual([]);
   });
 
   it('指定日期详情仅使用快照空间和快照照片构造公开记录', async () => {

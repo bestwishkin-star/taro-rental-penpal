@@ -1,4 +1,5 @@
 import type {
+  HouseRecordActivityState,
   HouseRecordListing,
   HouseRecordSnapshotResponse,
   HouseRecordSnapshotStatus,
@@ -9,6 +10,11 @@ import { BizCode } from '@shared/errors';
 
 import { AppError } from '@/lib/errors';
 
+import {
+  isHouseRecordOwner,
+  listTimelineActivities,
+  type HouseRecordTimelineActivity
+} from './house-record-activity.repository';
 import { getShanghaiDate, getTimelineRange } from './house-record-date';
 import {
   countRecentSnapshots,
@@ -29,11 +35,50 @@ import { publishCurrentHouseRecord } from './house-record-snapshot.service';
 /** 发现列表单页最大数量，避免公开接口被超大分页拖垮。 */
 const MAX_PAGE_SIZE = 50;
 
+/** 同一自然日活动合并后的隐私安全摘要。 */
+interface TimelineActivitySummary {
+  state: HouseRecordActivityState;
+  publicModules: NonNullable<HouseRecordTimelineActivity['module']>[];
+  hasPrivateActivity: boolean;
+}
+
 /** 将字符串分页参数限制为正整数。 */
 function positiveInteger(value: string | undefined, fallback: number, maximum?: number): number {
   const parsed = Number.parseInt(value ?? '', 10);
   const normalized = Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
   return maximum ? Math.min(normalized, maximum) : normalized;
+}
+
+/** 按查看者身份合并同日活动状态，拒绝原因仅对房主可见。 */
+function summarizeTimelineActivities(
+  activities: HouseRecordTimelineActivity[],
+  isOwner: boolean
+): TimelineActivitySummary {
+  const hasPending = activities.some((item) => item.projectionStatus === 'PENDING');
+  const hasRejected = activities.some((item) => item.projectionStatus === 'REJECTED');
+  const publicModules = activities.flatMap((item) =>
+    item.visibility === 'PUBLIC' &&
+    item.projectionStatus === 'PUBLISHED' &&
+    item.module
+      ? [item.module]
+      : []
+  );
+  const hasPrivateActivity = activities.some(
+    (item) =>
+      item.visibility === 'PRIVATE' ||
+      item.projectionStatus === 'NOT_REQUESTED' ||
+      item.projectionStatus === 'REJECTED'
+  );
+
+  let state: HouseRecordActivityState = 'PRIVATE_ACTIVITY';
+  if (hasRejected && isOwner) state = 'REVIEW_REJECTED_OWNER_ONLY';
+  else if (hasPending) state = 'REVIEW_PENDING';
+  else if (publicModules.length > 0) state = 'PUBLIC_UPDATE';
+  return {
+    state,
+    publicModules: [...new Set(publicModules)],
+    hasPrivateActivity
+  };
 }
 
 /** 读取房屋实录发现列表，并批量补齐更新次数和可信标签。 */
@@ -67,17 +112,26 @@ export async function readHouseRecords(
 export async function readHouseRecordTimeline(
   rentalId: string,
   _days = 30,
-  now = new Date()
+  now = new Date(),
+  viewerOpenid?: string
 ): Promise<HouseRecordTimelineResponse> {
   const range = getTimelineRange(getShanghaiDate(now));
   const summary = await getPublicHouseRecordSummary(rentalId);
   if (!summary) throw new AppError(BizCode.RENTAL_NOT_FOUND);
 
   const snapshots = await listTimelineSnapshots(rentalId, range);
-  const [modules, labels] = await Promise.all([
+  const [modules, labels, activities, isOwner] = await Promise.all([
     listTimelineModules(snapshots.map((snapshot) => snapshot.snapshotId)),
-    getBatchTrustLabels([rentalId])
+    getBatchTrustLabels([rentalId]),
+    listTimelineActivities(rentalId, range),
+    isHouseRecordOwner(rentalId, viewerOpenid)
   ]);
+  const activitiesByDate = new Map<string, HouseRecordTimelineActivity[]>();
+  for (const activity of activities) {
+    const current = activitiesByDate.get(activity.snapshotDate) ?? [];
+    current.push(activity);
+    activitiesByDate.set(activity.snapshotDate, current);
+  }
   return {
     rentalId,
     title: summary.title,
@@ -85,14 +139,26 @@ export async function readHouseRecordTimeline(
     trustLabels: labels.get(rentalId) ?? [],
     rangeStart: range.start,
     rangeEnd: range.end,
-    nodes: snapshots.map((snapshot, index) => ({
-      snapshotDate: snapshot.snapshotDate,
-      source: snapshot.source,
-      updatedModules: modules.get(snapshot.snapshotId) ?? [],
-      contentPreview: snapshot.contentPreview,
-      coverPhoto: snapshot.coverPhoto,
-      isLatest: index === 0
-    }))
+    nodes: snapshots.map((snapshot, index) => {
+      const dailyActivities = activitiesByDate.get(snapshot.snapshotDate);
+      const activity = dailyActivities
+        ? summarizeTimelineActivities(dailyActivities, isOwner)
+        : null;
+      const activityState = activity?.state ?? 'PUBLIC_UPDATE';
+      const canShowPublicMedia = activityState === 'PUBLIC_UPDATE';
+      return {
+        snapshotDate: snapshot.snapshotDate,
+        source: snapshot.source,
+        activityState,
+        updatedModules: activity
+          ? activity.publicModules
+          : modules.get(snapshot.snapshotId) ?? [],
+        hasPrivateActivity: activity?.hasPrivateActivity ?? false,
+        contentPreview: canShowPublicMedia ? snapshot.contentPreview : undefined,
+        coverPhoto: canShowPublicMedia ? snapshot.coverPhoto : undefined,
+        isLatest: index === 0
+      };
+    })
   };
 }
 
