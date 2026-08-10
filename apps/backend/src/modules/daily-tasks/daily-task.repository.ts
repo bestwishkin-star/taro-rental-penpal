@@ -1,6 +1,7 @@
 import type {
   DailyTaskAnswerValue,
   DailyTaskActivitySummary,
+  DailyTaskReplacementReason,
   DailyTaskStatus,
   DailyTaskVisibility,
   PublicProjectionStatus
@@ -154,6 +155,20 @@ interface RentalTaskObservationRow extends RowDataPacket {
   observed_at: Date | string;
 }
 
+/** 每日任务照片证据校验所需的图片资产行。 */
+interface TaskPhotoAssetRow extends RowDataPacket {
+  id: string;
+  content_hash: string;
+  upload_source: string;
+  safety_status: PhotoSafetyStatus;
+  household_status: PhotoHouseholdStatus;
+}
+
+/** 查询重复内容哈希时使用的存在性数据库行。 */
+interface ReusedPhotoContentRow extends RowDataPacket {
+  reused: number;
+}
+
 /** 新增不可变事实值所需参数。 */
 export interface InsertSpaceFactValueInput {
   rentalId: string;
@@ -197,6 +212,15 @@ export interface AppendSnapshotActivityInput {
   module: HouseModuleId;
   taskId: string;
   projectionStatus: PublicProjectionStatus;
+}
+
+/** 每日任务照片归属、来源、重复内容和审核聚合结果。 */
+export interface TaskPhotoEvidenceState {
+  allOwned: boolean;
+  allCamera: boolean;
+  contentReused: boolean;
+  safetyStatus: PhotoSafetyStatus;
+  householdStatus: PhotoHouseholdStatus;
 }
 
 /** 任务详情查询复用的字段和公开投影关联片段。 */
@@ -347,6 +371,21 @@ function mapTaskObservationRow(row: RentalTaskObservationRow): RentalTaskObserva
     publicProjectionStatus: row.public_projection_status,
     observedAt: new Date(row.observed_at).toISOString()
   };
+}
+
+/** 汇总多张图片的安全状态，明确拒绝优先于人工复核和处理中。 */
+function aggregateSafetyStatus(rows: TaskPhotoAssetRow[]): PhotoSafetyStatus {
+  if (rows.some((row) => row.safety_status === 'REJECTED')) return 'REJECTED';
+  if (rows.some((row) => row.safety_status === 'REVIEW')) return 'REVIEW';
+  if (rows.every((row) => row.safety_status === 'PASSED')) return 'PASSED';
+  return 'PENDING';
+}
+
+/** 汇总多张图片的家庭一致性状态，明确可疑优先于处理中。 */
+function aggregateHouseholdStatus(rows: TaskPhotoAssetRow[]): PhotoHouseholdStatus {
+  if (rows.some((row) => row.household_status === 'SUSPICIOUS')) return 'SUSPICIOUS';
+  if (rows.every((row) => row.household_status === 'CONSISTENT')) return 'CONSISTENT';
+  return 'PENDING';
 }
 
 /** 区分无所有权与房屋尚未公开，供 Service 映射不同业务错误。 */
@@ -779,4 +818,188 @@ export async function markTaskCompleted(
     [completedAt, taskId]
   );
   return result.affectedRows === 1;
+}
+
+/** 按主键读取指定房主的每日任务，供拍摄挑战签发前校验。 */
+export async function findDailyTaskById(
+  ownerOpenid: string,
+  rentalId: string,
+  taskId: string
+): Promise<DailyTaskRecord | null> {
+  const [rows] = await pool.execute<DailyTaskRow[]>(
+    `${TASK_SELECT}
+     WHERE t.id = ? AND t.rental_id = ? AND t.owner_openid = ?
+     LIMIT 1`,
+    [taskId, rentalId, ownerOpenid]
+  );
+  return rows[0] ? mapDailyTaskRow(rows[0]) : null;
+}
+
+/** 在调用方事务中读取房屋、日期和槽位唯一任务。 */
+export async function findDailyTaskBySlotWithConnection(
+  connection: PoolConnection,
+  rentalId: string,
+  taskDate: string,
+  slot: number
+): Promise<DailyTaskRecord | null> {
+  const [rows] = await connection.execute<DailyTaskRow[]>(
+    `${TASK_SELECT}
+     WHERE t.rental_id = ? AND t.task_date = ? AND t.slot = ?
+     LIMIT 1`,
+    [rentalId, taskDate, slot]
+  );
+  return rows[0] ? mapDailyTaskRow(rows[0]) : null;
+}
+
+/** 在调用方事务中保存模板版本并创建替换任务。 */
+export async function insertDailyTaskWithConnection(
+  connection: PoolConnection,
+  input: InsertDailyTaskInput
+): Promise<DailyTaskRecord> {
+  const { template } = input.selection;
+  await connection.execute(
+    `INSERT INTO rental_daily_task_templates
+      (id, version, generator_type, generator_version, policy_version, module_type, task_type,
+       title, prompt, explanation_template, estimated_seconds, allowed_periods,
+       evidence_requirement, question_schema, fact_mapping, cooldown_days, active)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE id = id`,
+    [
+      template.id,
+      template.version,
+      template.generatorType,
+      template.generatorVersion,
+      template.policyVersion,
+      template.module,
+      template.type,
+      template.title,
+      template.prompt,
+      template.explanation,
+      template.estimatedSeconds,
+      JSON.stringify(template.allowedPeriods),
+      JSON.stringify(template.evidenceRequirement),
+      JSON.stringify(template.questionSchema),
+      JSON.stringify(template.factMapping),
+      template.cooldownDays,
+      template.active ? 1 : 0
+    ]
+  );
+
+  const id = generateId();
+  await connection.execute<ResultSetHeader>(
+    `INSERT INTO rental_daily_tasks
+      (id, rental_id, owner_openid, task_date, slot, template_id, template_version, status,
+       assignment_reason, weight_snapshot, parent_task_id, expires_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'ASSIGNED', ?, ?, ?, ?)`,
+    [
+      id,
+      input.rentalId,
+      input.ownerOpenid,
+      input.taskDate,
+      input.slot,
+      template.id,
+      template.version,
+      input.selection.assignmentReason,
+      JSON.stringify(input.selection.candidates),
+      input.parentTaskId ?? null,
+      input.expiresAt
+    ]
+  );
+  const task = await findDailyTaskBySlotWithConnection(
+    connection,
+    input.rentalId,
+    input.taskDate,
+    input.slot
+  );
+  if (!task) throw new Error('替换任务写入后无法回读');
+  return task;
+}
+
+/** 将仅处于 ASSIGNED 的原始任务标记为已替换并保存私密原因。 */
+export async function markTaskReplaced(
+  connection: PoolConnection,
+  taskId: string,
+  reason: DailyTaskReplacementReason,
+  note?: string
+): Promise<boolean> {
+  const [result] = await connection.execute<ResultSetHeader>(
+    `UPDATE rental_daily_tasks
+     SET status = 'REPLACED', replacement_reason = ?, replacement_note = ?
+     WHERE id = ? AND slot = 0 AND status = 'ASSIGNED'`,
+    [reason, note ?? null, taskId]
+  );
+  return result.affectedRows === 1;
+}
+
+/** 校验照片归属、现场来源和内容哈希是否已用于其他每日观察。 */
+export async function inspectTaskPhotoEvidence(
+  connection: PoolConnection,
+  ownerOpenid: string,
+  taskId: string,
+  photoAssetIds: string[]
+): Promise<TaskPhotoEvidenceState> {
+  const uniqueAssetIds = [...new Set(photoAssetIds)];
+  if (uniqueAssetIds.length === 0) {
+    return {
+      allOwned: true,
+      allCamera: true,
+      contentReused: false,
+      safetyStatus: 'UNCHECKED',
+      householdStatus: 'UNCHECKED'
+    };
+  }
+
+  const placeholders = uniqueAssetIds.map(() => '?').join(', ');
+  const [assets] = await connection.execute<TaskPhotoAssetRow[]>(
+    `SELECT id, content_hash, upload_source, safety_status, household_status
+     FROM photo_assets
+     WHERE owner_openid = ? AND id IN (${placeholders})
+     FOR UPDATE`,
+    [ownerOpenid, ...uniqueAssetIds]
+  );
+  const allOwned = assets.length === uniqueAssetIds.length && uniqueAssetIds.length === photoAssetIds.length;
+  if (!allOwned) {
+    return {
+      allOwned: false,
+      allCamera: false,
+      contentReused: false,
+      safetyStatus: 'UNCHECKED',
+      householdStatus: 'UNCHECKED'
+    };
+  }
+
+  const hashPlaceholders = assets.map(() => '?').join(', ');
+  const [reusedRows] = await connection.execute<ReusedPhotoContentRow[]>(
+    `SELECT 1 AS reused
+     FROM rental_task_observations observation
+     INNER JOIN photo_assets used_asset
+       ON used_asset.owner_openid = observation.owner_openid
+      AND JSON_CONTAINS(observation.photo_asset_ids, JSON_QUOTE(used_asset.id))
+     WHERE observation.owner_openid = ?
+       AND observation.task_id <> ?
+       AND used_asset.content_hash IN (${hashPlaceholders})
+     LIMIT 1`,
+    [ownerOpenid, taskId, ...assets.map((asset) => asset.content_hash)]
+  );
+  return {
+    allOwned: true,
+    allCamera: assets.every((asset) => asset.upload_source === 'CAMERA'),
+    contentReused:
+      reusedRows.length > 0 ||
+      new Set(assets.map((asset) => asset.content_hash)).size !== assets.length,
+    safetyStatus: aggregateSafetyStatus(assets),
+    householdStatus: aggregateHouseholdStatus(assets)
+  };
+}
+
+/** 在同一完成事务中同步观察记录的公开投影状态。 */
+export async function updateObservationProjectionStatus(
+  connection: PoolConnection,
+  observationId: string,
+  status: PublicProjectionStatus
+): Promise<void> {
+  await connection.execute<ResultSetHeader>(
+    'UPDATE rental_task_observations SET public_projection_status = ? WHERE id = ?',
+    [status, observationId]
+  );
 }

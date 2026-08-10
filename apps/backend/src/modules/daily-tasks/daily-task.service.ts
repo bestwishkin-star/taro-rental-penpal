@@ -3,7 +3,9 @@ import type {
   CompleteDailyTaskResult,
   DailyTaskActivitySummary,
   DailyTaskDetail,
+  DailyTaskReplacementReason,
   DailyTaskTodayResponse,
+  DailyTaskPhotoChallenge,
   PublicProjectionStatus
 } from '@shared/contracts/daily-task';
 import { BizCode } from '@shared/errors';
@@ -12,24 +14,35 @@ import { z } from 'zod';
 import { AppError } from '@/lib/errors';
 import { pool } from '@/lib/mysql';
 import { getShanghaiDate } from '@/modules/house-records/house-record-date';
+import { getRandomCapturePrompt } from '@/modules/rentals/rental-space-prompts';
 
+import {
+  consumeDailyTaskCaptureChallenge,
+  createDailyTaskCaptureChallenge
+} from './daily-task-capture.repository';
 import { recordDailyTaskEvent } from './daily-task-events';
 import {
   appendSnapshotActivity,
   findDailyTaskBySlot,
+  findDailyTaskBySlotWithConnection,
+  findDailyTaskById,
   findObservationByIdempotencyKeyWithConnection,
   findObservationByTaskIdWithConnection,
   getActivitySummary,
   getLatestSnapshotDate,
   getOwnedRentalState,
   insertDailyTask,
+  insertDailyTaskWithConnection,
   insertImmutableObservation,
+  inspectTaskPhotoEvidence,
   listRecentTaskHistory,
   lockDailyTask,
   markTaskCompleted,
+  markTaskReplaced,
   markTaskStarted,
   type DailyTaskHistoryItem,
-  type DailyTaskRecord
+  type DailyTaskRecord,
+  updateObservationProjectionStatus
 } from './daily-task.repository';
 import { projectObservation, readOwnerSpaceFacts } from './daily-task-projection.service';
 import { selectDailyTaskTemplate } from './daily-task.selector';
@@ -65,6 +78,20 @@ const COMPLETE_DAILY_TASK_SCHEMA = z
     conclusionVisibility: z.enum(['PRIVATE', 'PUBLIC']),
     photoVisibility: z.enum(['PRIVATE', 'PUBLIC']),
     observedAt: z.string().datetime({ offset: true })
+  })
+  .strict();
+
+/** 更换任务接口仅接受固定私密原因和可选短说明。 */
+const REPLACE_DAILY_TASK_SCHEMA = z
+  .object({
+    reason: z.enum([
+      'NOT_AT_HOME',
+      'SPACE_UNAVAILABLE',
+      'TIME_UNSUITABLE',
+      'PRIVACY_CONCERN',
+      'OTHER'
+    ]),
+    note: z.string().trim().min(1).max(200).optional()
   })
   .strict();
 
@@ -383,6 +410,29 @@ export async function completeDailyTask(
       assertTaskCanComplete(task, template, input, now);
 
       const hasPhotos = input.photoAssetIds.length > 0;
+      const photoEvidence = await inspectTaskPhotoEvidence(
+        connection,
+        ownerOpenid,
+        task.id,
+        input.photoAssetIds
+      );
+      if (!photoEvidence.allOwned) throw new AppError(BizCode.TASK_EVIDENCE_REQUIRED);
+      if (photoEvidence.contentReused) throw new AppError(BizCode.PHOTO_CONTENT_REUSED);
+      if (template.evidenceRequirement.requiresCaptureChallenge) {
+        if (!photoEvidence.allCamera || !input.challengeId) {
+          throw new AppError(BizCode.TASK_EVIDENCE_REQUIRED);
+        }
+        const consumed = await consumeDailyTaskCaptureChallenge(
+          connection,
+          input.challengeId,
+          ownerOpenid,
+          task.id,
+          template.module,
+          template.version,
+          now
+        );
+        if (!consumed) throw new AppError(BizCode.PHOTO_CHALLENGE_EXPIRED);
+      }
       const initialProjectionStatus = getInitialProjectionStatus(input, template);
       const observation = await insertImmutableObservation(connection, {
         taskId: task.id,
@@ -397,12 +447,17 @@ export async function completeDailyTask(
         conclusionVisibility: input.conclusionVisibility,
         photoVisibility: input.photoVisibility,
         integrityStatus: 'PASSED',
-        safetyStatus: hasPhotos ? 'PENDING' : 'UNCHECKED',
-        householdStatus: hasPhotos ? 'PENDING' : 'UNCHECKED',
+        safetyStatus: hasPhotos ? photoEvidence.safetyStatus : 'UNCHECKED',
+        householdStatus: hasPhotos ? photoEvidence.householdStatus : 'UNCHECKED',
         publicProjectionStatus: initialProjectionStatus,
         observedAt: input.observedAt
       });
       const projection = await projectObservation(observation, template, connection);
+      await updateObservationProjectionStatus(
+        connection,
+        observation.id,
+        projection.publicProjectionStatus
+      );
       const snapshot = await replaceSnapshotFromPublicFactsWithConnection(connection, {
         rentalId: task.rentalId,
         ownerOpenid: task.ownerOpenid,
@@ -458,4 +513,142 @@ export async function completeDailyTask(
     freshnessPercent,
     publicProjectionStatus: completedObservation.publicProjectionStatus
   };
+}
+
+/** 严格解析任务更换原因，补充说明始终保持私密。 */
+function parseReplaceDailyTaskInput(
+  input: unknown
+): { reason: DailyTaskReplacementReason; note?: string } {
+  const result = REPLACE_DAILY_TASK_SCHEMA.safeParse(input);
+  if (!result.success) throw new AppError(BizCode.INVALID_PARAMS);
+  return result.data;
+}
+
+/** 为仍有效的照片任务签发与任务、空间和模板版本绑定的现场挑战。 */
+export async function issueDailyTaskPhotoChallenge(
+  ownerOpenid: string,
+  rentalId: string,
+  taskId: string,
+  now = new Date()
+): Promise<DailyTaskPhotoChallenge> {
+  await assertPublishedOwner(ownerOpenid, rentalId);
+  const task = await findDailyTaskById(ownerOpenid, rentalId, taskId);
+  if (!task) throw new AppError(BizCode.DAILY_TASK_NOT_FOUND);
+  const template = task.template ?? findTemplate(task.templateId, task.templateVersion);
+  if (!template) throw new AppError(BizCode.TASK_TEMPLATE_VERSION_UNAVAILABLE);
+  if (
+    !template.evidenceRequirement.requiresCaptureChallenge ||
+    !['ASSIGNED', 'STARTED'].includes(task.status)
+  ) {
+    throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+  }
+  if (
+    task.taskDate !== getShanghaiDate(now) ||
+    new Date(task.expiresAt).getTime() <= now.getTime()
+  ) {
+    throw new AppError(BizCode.DAILY_TASK_EXPIRED);
+  }
+  return createDailyTaskCaptureChallenge(
+    ownerOpenid,
+    task.id,
+    template.module,
+    template.version,
+    getRandomCapturePrompt(template.module)
+  );
+}
+
+/** 在单一事务中将 slot 0 原任务替换为当天唯一的 slot 1 任务。 */
+export async function replaceDailyTask(
+  ownerOpenid: string,
+  rentalId: string,
+  taskId: string,
+  rawInput: unknown,
+  now = new Date()
+): Promise<DailyTaskDetail> {
+  const input = parseReplaceDailyTaskInput(rawInput);
+  await assertPublishedOwner(ownerOpenid, rentalId);
+  const connection = await pool.getConnection();
+  let originalTaskDate: string | undefined;
+
+  try {
+    await connection.beginTransaction();
+    const original = await lockDailyTask(connection, ownerOpenid, rentalId, taskId);
+    if (!original) throw new AppError(BizCode.DAILY_TASK_NOT_FOUND);
+    originalTaskDate = original.taskDate;
+    if (original.slot !== 0) throw new AppError(BizCode.REPLACEMENT_LIMIT_REACHED);
+
+    const existingReplacement = await findDailyTaskBySlotWithConnection(
+      connection,
+      rentalId,
+      original.taskDate,
+      1
+    );
+    if (existingReplacement) {
+      await connection.commit();
+      return toTaskDetail(existingReplacement, 0);
+    }
+    if (
+      original.status !== 'ASSIGNED' ||
+      original.taskDate !== getShanghaiDate(now)
+    ) {
+      throw new AppError(BizCode.REPLACEMENT_LIMIT_REACHED);
+    }
+    if (new Date(original.expiresAt).getTime() <= now.getTime()) {
+      throw new AppError(BizCode.DAILY_TASK_EXPIRED);
+    }
+
+    const originalTemplate = original.template ?? findTemplate(
+      original.templateId,
+      original.templateVersion
+    );
+    if (!originalTemplate) throw new AppError(BizCode.TASK_TEMPLATE_VERSION_UNAVAILABLE);
+    const history = await listRecentTaskHistory(rentalId, original.taskDate, 30);
+    const selection = selectDailyTaskTemplate({
+      templates: DAILY_TASK_TEMPLATES,
+      taskDate: original.taskDate,
+      period: getShanghaiPeriod(now),
+      recentTemplateIds: [
+        original.templateId,
+        ...getCoolingTemplateIds(original.taskDate, history)
+      ],
+      recentModules: getRecentModules(history),
+      staleDaysByFact: {},
+      excludedDimension: originalTemplate.dimension,
+      seed: `${rentalId}:${original.taskDate}:1`
+    });
+    const replaced = await markTaskReplaced(
+      connection,
+      original.id,
+      input.reason,
+      input.note
+    );
+    if (!replaced) throw new AppError(BizCode.TASK_COMPLETION_CONFLICT);
+    const replacement = await insertDailyTaskWithConnection(connection, {
+      rentalId,
+      ownerOpenid,
+      taskDate: original.taskDate,
+      slot: 1,
+      selection,
+      expiresAt: new Date(original.expiresAt),
+      parentTaskId: original.id
+    });
+    await connection.commit();
+    recordDailyTaskEvent('daily_task_replaced', {
+      rentalId,
+      taskId: replacement.id,
+      templateId: replacement.templateId,
+      replacementReason: input.reason,
+      status: replacement.status
+    });
+    return toTaskDetail(replacement, 0);
+  } catch (error) {
+    await connection.rollback();
+    if (isDuplicateEntry(error) && originalTaskDate) {
+      const concurrentReplacement = await findDailyTaskBySlot(rentalId, originalTaskDate, 1);
+      if (concurrentReplacement) return toTaskDetail(concurrentReplacement, 0);
+    }
+    throw error;
+  } finally {
+    connection.release();
+  }
 }

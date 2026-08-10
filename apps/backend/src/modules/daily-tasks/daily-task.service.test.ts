@@ -1,21 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { pool } from '@/lib/mysql';
+import { getRandomCapturePrompt } from '@/modules/rentals/rental-space-prompts';
 
+import {
+  consumeDailyTaskCaptureChallenge,
+  createDailyTaskCaptureChallenge
+} from './daily-task-capture.repository';
 import {
   appendSnapshotActivity,
   findDailyTaskBySlot,
+  findDailyTaskBySlotWithConnection,
+  findDailyTaskById,
   findObservationByIdempotencyKeyWithConnection,
   findObservationByTaskIdWithConnection,
   getActivitySummary,
   getLatestSnapshotDate,
   getOwnedRentalState,
   insertDailyTask,
+  insertDailyTaskWithConnection,
   insertImmutableObservation,
+  inspectTaskPhotoEvidence,
   listRecentTaskHistory,
   lockDailyTask,
   markTaskCompleted,
+  markTaskReplaced,
   markTaskStarted,
+  updateObservationProjectionStatus,
   type DailyTaskRecord
 } from './daily-task.repository';
 import { projectObservation, readOwnerSpaceFacts } from './daily-task-projection.service';
@@ -23,7 +34,9 @@ import { selectDailyTaskTemplate } from './daily-task.selector';
 import {
   completeDailyTask,
   getOrCreateTodayTask,
+  issueDailyTaskPhotoChallenge,
   readDailyTaskActivity,
+  replaceDailyTask,
   startDailyTask
 } from './daily-task.service';
 import { replaceSnapshotFromPublicFactsWithConnection } from './daily-task-snapshot.service';
@@ -31,21 +44,35 @@ import { DAILY_TASK_TEMPLATES } from './daily-task.templates';
 import type { RentalTaskObservation } from './daily-task.types';
 
 vi.mock('@/lib/mysql', () => ({ pool: { getConnection: vi.fn() } }));
+vi.mock('@/modules/rentals/rental-space-prompts', () => ({
+  getRandomCapturePrompt: vi.fn()
+}));
+
+vi.mock('./daily-task-capture.repository', () => ({
+  consumeDailyTaskCaptureChallenge: vi.fn(),
+  createDailyTaskCaptureChallenge: vi.fn()
+}));
 
 vi.mock('./daily-task.repository', () => ({
   appendSnapshotActivity: vi.fn(),
   findDailyTaskBySlot: vi.fn(),
+  findDailyTaskBySlotWithConnection: vi.fn(),
+  findDailyTaskById: vi.fn(),
   findObservationByIdempotencyKeyWithConnection: vi.fn(),
   findObservationByTaskIdWithConnection: vi.fn(),
   getActivitySummary: vi.fn(),
   getLatestSnapshotDate: vi.fn(),
   getOwnedRentalState: vi.fn(),
   insertDailyTask: vi.fn(),
+  insertDailyTaskWithConnection: vi.fn(),
   insertImmutableObservation: vi.fn(),
+  inspectTaskPhotoEvidence: vi.fn(),
   listRecentTaskHistory: vi.fn(),
   lockDailyTask: vi.fn(),
   markTaskCompleted: vi.fn(),
-  markTaskStarted: vi.fn()
+  markTaskReplaced: vi.fn(),
+  markTaskStarted: vi.fn(),
+  updateObservationProjectionStatus: vi.fn()
 }));
 
 vi.mock('./daily-task.selector', () => ({ selectDailyTaskTemplate: vi.fn() }));
@@ -167,6 +194,23 @@ describe('daily-task.service', () => {
     });
     vi.mocked(appendSnapshotActivity).mockResolvedValue(undefined);
     vi.mocked(markTaskCompleted).mockResolvedValue(true);
+    vi.mocked(markTaskReplaced).mockResolvedValue(true);
+    vi.mocked(updateObservationProjectionStatus).mockResolvedValue(undefined);
+    vi.mocked(findDailyTaskBySlotWithConnection).mockResolvedValue(null);
+    vi.mocked(inspectTaskPhotoEvidence).mockResolvedValue({
+      allOwned: true,
+      allCamera: true,
+      contentReused: false,
+      safetyStatus: 'UNCHECKED',
+      householdStatus: 'UNCHECKED'
+    });
+    vi.mocked(consumeDailyTaskCaptureChallenge).mockResolvedValue(true);
+    vi.mocked(getRandomCapturePrompt).mockReturnValue('请按当前提示拍摄现场照片');
+    vi.mocked(createDailyTaskCaptureChallenge).mockResolvedValue({
+      id: 'challenge-1',
+      prompt: '请按当前提示拍摄现场照片',
+      expiresAt: '2026-08-10T08:15:00.000Z'
+    });
     vi.mocked(readOwnerSpaceFacts).mockResolvedValue([
       { module: 'kitchen', freshnessPercent: 100, facts: [] }
     ]);
@@ -296,6 +340,106 @@ describe('daily-task.service', () => {
         new Date('2026-08-10T08:00:00.000Z')
       )
     ).rejects.toMatchObject({ bizCode: 1314 });
+    expect(insertImmutableObservation).not.toHaveBeenCalled();
+  });
+
+  it('每天只允许创建 slot 1 且排除原任务维度', async () => {
+    const replacementTemplate = DAILY_TASK_TEMPLATES.find(
+      (item) => item.id === 'kitchen-cooking-event'
+    )!;
+    const replacementTask = {
+      ...task,
+      id: 'task-2',
+      slot: 1,
+      templateId: replacementTemplate.id,
+      templateVersion: replacementTemplate.version,
+      template: replacementTemplate
+    };
+    vi.mocked(selectDailyTaskTemplate).mockReturnValue({
+      template: replacementTemplate,
+      assignmentReason: '替换原任务后重新选择',
+      candidates: []
+    });
+    vi.mocked(lockDailyTask).mockResolvedValue(task);
+    vi.mocked(insertDailyTaskWithConnection).mockResolvedValue(replacementTask);
+
+    await expect(
+      replaceDailyTask(
+        'owner-1',
+        'rental-1',
+        'task-1',
+        { reason: 'TIME_UNSUITABLE' },
+        new Date('2026-08-10T08:00:00.000Z')
+      )
+    ).resolves.toMatchObject({ id: 'task-2', remainingReplacements: 0 });
+    expect(selectDailyTaskTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ excludedDimension: template.dimension })
+    );
+    expect(insertDailyTaskWithConnection).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ slot: 1, parentTaskId: 'task-1' })
+    );
+  });
+
+  it('照片任务挑战绑定任务空间和模板版本', async () => {
+    const photoTemplate = DAILY_TASK_TEMPLATES.find(
+      (item) => item.id === 'kitchen-worktop-photo'
+    )!;
+    vi.mocked(findDailyTaskById).mockResolvedValue({
+      ...task,
+      templateId: photoTemplate.id,
+      templateVersion: photoTemplate.version,
+      template: photoTemplate
+    });
+
+    await issueDailyTaskPhotoChallenge(
+      'owner-1',
+      'rental-1',
+      'task-1',
+      new Date('2026-08-10T08:00:00.000Z')
+    );
+
+    expect(createDailyTaskCaptureChallenge).toHaveBeenCalledWith(
+      'owner-1',
+      'task-1',
+      'kitchen',
+      photoTemplate.version,
+      '请按当前提示拍摄现场照片'
+    );
+  });
+
+  it('照片内容哈希已用于其他任务时拒绝完成', async () => {
+    const photoTemplate = DAILY_TASK_TEMPLATES.find(
+      (item) => item.id === 'kitchen-worktop-photo'
+    )!;
+    vi.mocked(lockDailyTask).mockResolvedValue({
+      ...startedTask,
+      templateId: photoTemplate.id,
+      templateVersion: photoTemplate.version,
+      template: photoTemplate
+    });
+    vi.mocked(inspectTaskPhotoEvidence).mockResolvedValue({
+      allOwned: true,
+      allCamera: true,
+      contentReused: true,
+      safetyStatus: 'PASSED',
+      householdStatus: 'CONSISTENT'
+    });
+
+    await expect(
+      completeDailyTask(
+        'owner-1',
+        'rental-1',
+        'task-1',
+        {
+          ...completionInput,
+          answers: { worktop_state: 'enough' },
+          photoAssetIds: ['photo-1'],
+          challengeId: 'challenge-1'
+        },
+        new Date('2026-08-10T08:00:00.000Z')
+      )
+    ).rejects.toMatchObject({ bizCode: 1317 });
     expect(insertImmutableObservation).not.toHaveBeenCalled();
   });
 });
