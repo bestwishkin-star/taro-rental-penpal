@@ -169,6 +169,17 @@ interface ReusedPhotoContentRow extends RowDataPacket {
   reused: number;
 }
 
+/** 待审核观察锁定查询额外返回的模板版本字段。 */
+interface PendingTaskProjectionRow extends RentalTaskObservationRow {
+  template_id: string;
+  template_version: number;
+}
+
+/** 事实键查询返回的数据库行。 */
+interface FactKeyRow extends RowDataPacket {
+  fact_key: string;
+}
+
 /** 新增不可变事实值所需参数。 */
 export interface InsertSpaceFactValueInput {
   rentalId: string;
@@ -221,6 +232,13 @@ export interface TaskPhotoEvidenceState {
   contentReused: boolean;
   safetyStatus: PhotoSafetyStatus;
   householdStatus: PhotoHouseholdStatus;
+}
+
+/** 异步审核回填所需的观察与不可变模板版本。 */
+export interface PendingTaskProjectionReview {
+  observation: RentalTaskObservation;
+  templateId: string;
+  templateVersion: number;
 }
 
 /** 任务详情查询复用的字段和公开投影关联片段。 */
@@ -1001,5 +1019,157 @@ export async function updateObservationProjectionStatus(
   await connection.execute<ResultSetHeader>(
     'UPDATE rental_task_observations SET public_projection_status = ? WHERE id = ?',
     [status, observationId]
+  );
+}
+
+/** 查找引用指定图片且仍等待公开投影的观察主键。 */
+export async function listPendingObservationIdsByPhotoAsset(
+  photoAssetId: string
+): Promise<string[]> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id
+     FROM rental_task_observations
+     WHERE public_projection_status = 'PENDING'
+       AND JSON_CONTAINS(photo_asset_ids, JSON_QUOTE(?))`,
+    [photoAssetId]
+  );
+  return rows.map((row) => String(row.id));
+}
+
+/** 读取全部仍等待公开审核的观察，避免固定窗口造成新记录饥饿。 */
+export async function listPendingObservationIds(): Promise<string[]> {
+  const [rows] = await pool.execute<RowDataPacket[]>(
+    `SELECT id
+     FROM rental_task_observations
+     WHERE public_projection_status = 'PENDING'
+     ORDER BY observed_at ASC`
+  );
+  return rows.map((row) => String(row.id));
+}
+
+/** 在审核回填事务中锁定一条仍处于 PENDING 的观察及其模板版本。 */
+export async function lockPendingTaskProjection(
+  connection: PoolConnection,
+  observationId: string
+): Promise<PendingTaskProjectionReview | null> {
+  const [rows] = await connection.execute<PendingTaskProjectionRow[]>(
+    `SELECT observation.id,
+            observation.task_id,
+            observation.rental_id,
+            observation.owner_openid,
+            observation.module_type,
+            DATE_FORMAT(observation.task_date, '%Y-%m-%d') AS task_date,
+            observation.idempotency_key,
+            observation.answers,
+            observation.measurement_values,
+            observation.photo_asset_ids,
+            observation.conclusion_visibility,
+            observation.photo_visibility,
+            observation.integrity_status,
+            observation.safety_status,
+            observation.household_status,
+            observation.public_projection_status,
+            observation.observed_at,
+            task.template_id,
+            task.template_version
+     FROM rental_task_observations observation
+     INNER JOIN rental_daily_tasks task ON task.id = observation.task_id
+     WHERE observation.id = ? AND observation.public_projection_status = 'PENDING'
+     LIMIT 1
+     FOR UPDATE`,
+    [observationId]
+  );
+  const row = rows[0];
+  return row
+    ? {
+        observation: mapTaskObservationRow(row),
+        templateId: row.template_id,
+        templateVersion: row.template_version
+      }
+    : null;
+}
+
+/** 汇总不可变观察引用的全部图片审核状态。 */
+export async function inspectObservationPhotoReview(
+  connection: PoolConnection,
+  photoAssetIds: string[]
+): Promise<{
+  allFound: boolean;
+  safetyStatus: PhotoSafetyStatus;
+  householdStatus: PhotoHouseholdStatus;
+}> {
+  const uniqueIds = [...new Set(photoAssetIds)];
+  if (uniqueIds.length === 0) {
+    return { allFound: false, safetyStatus: 'REJECTED', householdStatus: 'SUSPICIOUS' };
+  }
+  const placeholders = uniqueIds.map(() => '?').join(', ');
+  const [rows] = await connection.execute<TaskPhotoAssetRow[]>(
+    `SELECT id, content_hash, upload_source, safety_status, household_status
+     FROM photo_assets
+     WHERE id IN (${placeholders})
+     FOR UPDATE`,
+    uniqueIds
+  );
+  return {
+    allFound: rows.length === uniqueIds.length,
+    safetyStatus: aggregateSafetyStatus(rows),
+    householdStatus: aggregateHouseholdStatus(rows)
+  };
+}
+
+/** 按观察时间防倒退地推进该观察生成的全部公开事实头。 */
+export async function promotePublicFactHeads(
+  connection: PoolConnection,
+  observationId: string
+): Promise<string[]> {
+  await connection.execute<ResultSetHeader>(
+    `UPDATE rental_space_fact_heads head
+     INNER JOIN rental_space_fact_values candidate
+       ON candidate.rental_id = head.rental_id
+      AND candidate.module_type = head.module_type
+      AND candidate.fact_key = head.fact_key
+      AND candidate.source_observation_id = ?
+     LEFT JOIN rental_space_fact_values current_public
+       ON current_public.id = head.public_fact_value_id
+     SET head.public_fact_value_id = candidate.id
+     WHERE current_public.id IS NULL OR candidate.observed_at >= current_public.observed_at`,
+    [observationId]
+  );
+  const [rows] = await connection.execute<FactKeyRow[]>(
+    `SELECT value.fact_key
+     FROM rental_space_fact_values value
+     INNER JOIN rental_space_fact_heads head ON head.public_fact_value_id = value.id
+     WHERE value.source_observation_id = ?
+     ORDER BY value.fact_key`,
+    [observationId]
+  );
+  return rows.map((row) => row.fact_key);
+}
+
+/** 同步观察及对应成长树活动的异步审核结果。 */
+export async function updateTaskProjectionReviewStatus(
+  connection: PoolConnection,
+  input: {
+    observationId: string;
+    taskId: string;
+    safetyStatus: PhotoSafetyStatus;
+    householdStatus: PhotoHouseholdStatus;
+    projectionStatus: PublicProjectionStatus;
+  }
+): Promise<void> {
+  await connection.execute<ResultSetHeader>(
+    `UPDATE rental_task_observations
+     SET safety_status = ?, household_status = ?, public_projection_status = ?
+     WHERE id = ?`,
+    [
+      input.safetyStatus,
+      input.householdStatus,
+      input.projectionStatus,
+      input.observationId
+    ]
+  );
+  await connection.execute<ResultSetHeader>(
+    'UPDATE rental_snapshot_activities SET projection_status = ? WHERE task_id = ?',
+    [input.projectionStatus, input.taskId]
   );
 }

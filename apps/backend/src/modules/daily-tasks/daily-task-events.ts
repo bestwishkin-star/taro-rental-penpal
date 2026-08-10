@@ -5,6 +5,8 @@ export type DailyTaskEventName =
   | 'daily_task_started'
   | 'daily_task_completed'
   | 'daily_task_replaced'
+  | 'daily_task_projection_published'
+  | 'daily_task_projection_rejected'
   | 'daily_task_validation_failed';
 
 /** 结构化事件只允许写入定位任务所需的标识和计数。 */
