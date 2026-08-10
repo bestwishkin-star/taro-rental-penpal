@@ -15,6 +15,10 @@ export default defineAppConfig({
     {
       root: 'pages/house-record',
       pages: ['timeline/index', 'model/index']
+    },
+    {
+      root: 'pages/daily-task',
+      pages: ['index']
     }
   ],
   window: {

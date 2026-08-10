@@ -31,4 +31,13 @@ describe('app config', () => {
     expect(houseRecordPackage?.pages).toContain('timeline/index');
     expect(houseRecordPackage?.pages).toContain('model/index');
   });
+
+  it('registers the daily task subpackage page', async () => {
+    const config = await loadAppConfig();
+    const dailyTaskPackage = config.subPackages?.find(
+      (subpackage) => subpackage.root === 'pages/daily-task'
+    );
+
+    expect(dailyTaskPackage?.pages).toContain('index');
+  });
 });
