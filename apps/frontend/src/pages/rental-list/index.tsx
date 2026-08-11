@@ -3,20 +3,23 @@ import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useEffect, useRef, useState } from 'react';
 
-import { RentalCard } from '@/pages/find/components/RentalCard';
 import { fetchFavorites, fetchMyRentals, getBrowseHistory, updateRentalStatus } from '@/shared/api/services';
 import { AppLayout } from '@/shared/ui/app-layout';
 
+import { RentalStoryCard } from './components/RentalStoryCard';
 import './index.scss';
 
+/** 个人中心可进入的屋檐故事列表类型。 */
 type ListType = 'mine' | 'favorites' | 'history';
 
+/** 不同个人列表对应的页面标题。 */
 const TITLES: Record<ListType, string> = {
   mine: '我的屋檐记',
   favorites: '我的收藏',
   history: '浏览历史'
 };
 
+/** 不同个人列表对应的空状态文案。 */
 const EMPTY_TEXTS: Record<ListType, string> = {
   mine: '还没有写下屋檐记',
   favorites: '还没有收藏屋檐故事',
@@ -54,6 +57,7 @@ export default function RentalListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  /** 隐藏或重新展示当前用户发布的屋檐故事。 */
   async function handleToggleStatus(id: string, currentStatus: RentalStatus) {
     const nextStatus: RentalStatus = currentStatus === 'active' ? 'inactive' : 'active';
     try {
@@ -86,7 +90,7 @@ export default function RentalListPage() {
                 <Text className="rental-list-page__badge-text">已隐藏</Text>
               </View>
             )}
-            <RentalCard item={item} onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })} />
+            <RentalStoryCard item={item} onClick={() => void Taro.navigateTo({ url: `/pages/rental-detail/index?id=${item.id}` })} />
             {isMine && (
               <View className="rental-list-page__actions">
                 <View className="rental-list-page__status-btn" onClick={() => void handleToggleStatus(item.id, item.status)}>
