@@ -14,6 +14,7 @@ import { SpaceRecordSection } from './components/SpaceRecordSection';
 
 import './index.scss';
 
+/** 将后端相对图片地址转换为小程序可访问的完整地址。 */
 function normalizePhotoUrl(url: string): string {
   const serverBase = frontendEnv.apiBaseUrl.replace(/\/api$/, '');
   if (url.startsWith('/')) return `${serverBase}${url}`;
@@ -22,6 +23,7 @@ function normalizePhotoUrl(url: string): string {
   return url;
 }
 
+/** 将故事创建时间格式化为本地自然日。 */
 function formatDate(value?: string): string {
   if (!value) return '';
   const date = new Date(value);
@@ -64,6 +66,7 @@ export default function RentalDetailPage() {
       .finally(() => setLoading(false));
   }, [isLoggedIn, patchProfileStats]);
 
+  /** 收藏或取消收藏当前屋檐故事。 */
   function handleToggleFavorite() {
     if (!isLoggedIn) {
       void Taro.showToast({ title: '请先登录', icon: 'none' });
@@ -103,8 +106,8 @@ export default function RentalDetailPage() {
 
   return (
     <AppLayout mode="native" contentClassName="detail-page" safeAreaBottom={false}>
-      <View className="detail-hero">
-        {photos.length > 0 ? (
+      {photos.length > 0 && (
+        <View className="detail-hero">
           <Swiper
             className="detail-hero__swiper"
             indicatorDots={photos.length > 1}
@@ -118,12 +121,8 @@ export default function RentalDetailPage() {
               </SwiperItem>
             ))}
           </Swiper>
-        ) : (
-          <View className="detail-hero__placeholder">
-            <Text className="detail-hero__placeholder-text">屋檐故事</Text>
-          </View>
-        )}
-      </View>
+        </View>
+      )}
 
       <View className="detail-content">
         <View className="detail-story">

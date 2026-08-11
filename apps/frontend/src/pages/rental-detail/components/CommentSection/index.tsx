@@ -7,6 +7,7 @@ import { createRentalComment, deleteRentalComment, fetchRentalComments } from '@
 
 import './index.scss';
 
+/** 屋檐故事评论区参数。 */
 interface Props {
   rentalId: string;
 }
@@ -23,6 +24,7 @@ export function CommentSection({ rentalId }: Props) {
       .catch(() => Taro.showToast({ title: '评论加载失败', icon: 'none' }));
   }, [rentalId]);
 
+  /** 校验输入并发送一条公开评论。 */
   async function handleSubmit() {
     const value = content.trim();
     if (!value) {
@@ -41,6 +43,7 @@ export function CommentSection({ rentalId }: Props) {
     }
   }
 
+  /** 删除当前用户自己发布的评论。 */
   async function handleDelete(commentId: string) {
     try {
       await deleteRentalComment(commentId);
