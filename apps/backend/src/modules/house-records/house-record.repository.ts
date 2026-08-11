@@ -10,7 +10,9 @@ import type { RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
 import { summarizeRentalCheckins } from '@/modules/rentals/rental-checkin.repository';
+import { ensureRentalTrustSchema } from '@/modules/rentals/rental-trust-schema';
 
+import { ensureHouseRecordSnapshotSchema } from './house-record-schema';
 import type { HouseRecordDateRange } from './house-record.types';
 
 /** 发现列表使用的归一化分页参数。 */
@@ -126,6 +128,7 @@ function marks(values: readonly string[]): string {
 
 /** 查询发现页每套活动房屋的最新公开快照。 */
 export async function listLatestPublicSnapshots(query: HouseRecordListQuery) {
+  await ensureHouseRecordSnapshotSchema();
   const keyword = query.keyword?.trim();
   const keywordSql = keyword
     ? 'AND (s.title LIKE ? OR s.content_preview LIKE ? OR u.nickname LIKE ?)'
@@ -135,7 +138,11 @@ export async function listLatestPublicSnapshots(query: HouseRecordListQuery) {
     const pattern = '%' + keyword + '%';
     params.push(pattern, pattern, pattern);
   }
-  params.push((query.page - 1) * query.pageSize, query.pageSize);
+  // 分页值已由 service 约束为正整数，直接写入 SQL 兼容不支持 LIMIT 参数绑定的 MySQL。
+  const pageSize = Math.max(1, Math.trunc(query.pageSize));
+  const page = Math.max(1, Math.trunc(query.page));
+  const offset = (page - 1) * pageSize;
+  const paginationSql = 'LIMIT ' + pageSize + ' OFFSET ' + offset;
   const [rows] = await pool.execute<ListingRow[]>(
     `SELECT s.rental_id, s.title, s.content_preview, s.cover_photo_url,
             COALESCE(u.nickname, '租房用户') AS nickname, COALESCE(u.avatar_url, '') AS avatar_url,
@@ -149,7 +156,7 @@ export async function listLatestPublicSnapshots(query: HouseRecordListQuery) {
        AND r.status = 1 AND COALESCE(r.post_status, 'active') = 'active'
      LEFT JOIN users u ON u.openid = s.owner_openid
      WHERE 1 = 1 ` + keywordSql + `
-     ORDER BY s.updated_at DESC LIMIT ?, ?`,
+     ORDER BY s.updated_at DESC ` + paginationSql,
     params
   );
   return rows.map((row) => ({
@@ -166,6 +173,7 @@ export async function listLatestPublicSnapshots(query: HouseRecordListQuery) {
 
 /** 批量统计日期闭区间内各房屋的快照数量。 */
 export async function countRecentSnapshots(rentalIds: string[], range: HouseRecordDateRange) {
+  await ensureHouseRecordSnapshotSchema();
   const result = new Map<string, number>();
   if (rentalIds.length === 0) return result;
   const sql = `SELECT rental_id, COUNT(*) AS total
@@ -183,6 +191,7 @@ export async function getBatchTrustLabels(rentalIds: string[]) {
     rentalIds.map((rentalId) => [rentalId, ['SPACE_RECORD_COMPLETE']])
   );
   if (rentalIds.length === 0) return labels;
+  await ensureRentalTrustSchema();
   const placeholders = marks(rentalIds);
   // 三路查询按批次执行，查询次数不随发现列表长度增长。
   const [checkinResult, proofResult, privatePhotoResult] = await Promise.all([
@@ -226,6 +235,7 @@ export async function getBatchTrustLabels(rentalIds: string[]) {
 
 /** 读取活动房屋的公开作者摘要。 */
 export async function getPublicHouseRecordSummary(rentalId: string) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<SummaryRow[]>(
     `SELECT r.id AS rental_id, s.title, COALESCE(u.nickname, '租房用户') AS nickname,
             COALESCE(u.avatar_url, '') AS avatar_url
@@ -249,6 +259,7 @@ export async function getPublicHouseRecordSummary(rentalId: string) {
 
 /** 读取最近窗口内真实存在的快照，不补齐缺失日期。 */
 export async function listTimelineSnapshots(rentalId: string, range: HouseRecordDateRange) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<TimelineRow[]>(
     `SELECT s.id, DATE_FORMAT(s.snapshot_date, '%Y-%m-%d') AS snapshot_date,
             s.source, s.content_preview, s.cover_photo_url
@@ -270,6 +281,7 @@ export async function listTimelineSnapshots(rentalId: string, range: HouseRecord
 
 /** 批量读取时间线快照包含的空间模块。 */
 export async function listTimelineModules(snapshotIds: string[]) {
+  await ensureHouseRecordSnapshotSchema();
   const result = new Map<string, HouseModuleId[]>();
   if (snapshotIds.length === 0) return result;
   const sql = `SELECT snapshot_id, module_type FROM rental_public_snapshot_spaces
@@ -288,6 +300,7 @@ export async function listTimelineModules(snapshotIds: string[]) {
 
 /** 读取活动房屋指定日期的公开快照主表。 */
 export async function getPublicSnapshotHeader(rentalId: string, snapshotDate: string) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<HeaderRow[]>(
     `SELECT s.id, s.rental_id, DATE_FORMAT(s.snapshot_date, '%Y-%m-%d') AS snapshot_date, s.source
      FROM rental_public_snapshots s
@@ -304,6 +317,7 @@ export async function getPublicSnapshotHeader(rentalId: string, snapshotDate: st
 
 /** 读取指定快照固化的空间正文，不回查当前草稿。 */
 export async function listSnapshotSpaces(snapshotId: string) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<SpaceRow[]>(
     `SELECT id, module_type, scene_answers, observations, event_text,
             event_voice_url, event_occurred_period
@@ -324,6 +338,7 @@ export async function listSnapshotSpaces(snapshotId: string) {
 
 /** 批量读取快照空间的公开照片 URL。 */
 export async function listSnapshotPhotos(snapshotSpaceIds: string[]) {
+  await ensureHouseRecordSnapshotSchema();
   const result = new Map<string, string[]>();
   if (snapshotSpaceIds.length === 0) return result;
   const sql = `SELECT snapshot_space_id, file_url FROM rental_public_snapshot_photos
@@ -340,6 +355,7 @@ export async function listSnapshotPhotos(snapshotSpaceIds: string[]) {
 
 /** 聚合详情页可信依据，私密照片只形成布尔标识。 */
 export async function getRentalTrustEvidence(rentalId: string): Promise<RentalTrustEvidence> {
+  await ensureRentalTrustSchema();
   const [labels, checkinResult] = await Promise.all([
     getBatchTrustLabels([rentalId]),
     pool.execute<AggregateRow[]>(
@@ -364,6 +380,7 @@ export async function getRentalTrustEvidence(rentalId: string): Promise<RentalTr
 
 /** 校验房主是否拥有指定房屋，并返回当前公开状态。 */
 export async function getOwnerHouseRecordState(userOpenid: string, rentalId: string) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<OwnerRow[]>(
     'SELECT user_openid, status, post_status FROM rentals WHERE id = ? AND user_openid = ? LIMIT 1',
     [rentalId, userOpenid]
@@ -379,6 +396,7 @@ export async function getOwnerHouseRecordState(userOpenid: string, rentalId: str
 
 /** 读取当前草稿和最后公开快照时间，用于判断是否需要更新实录。 */
 export async function getOwnerSnapshotStatus(userOpenid: string, rentalId: string) {
+  await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<OwnerStatusRow[]>(
     `SELECT d.updated_at AS current_updated_at,
             DATE_FORMAT(s.snapshot_date, '%Y-%m-%d') AS latest_snapshot_date,

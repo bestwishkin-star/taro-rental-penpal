@@ -12,6 +12,7 @@ import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
 
 import { getSpacePromptConfig } from '../rentals/rental-space-prompts';
+import { ensureHouseRecordSnapshotSchema } from './house-record-schema';
 import type { SnapshotWriteInput, SnapshotWriteSpace } from './house-record.types';
 
 /** 房屋实录公开侧使用的默认标题。 */
@@ -45,6 +46,12 @@ interface OwnedSnapshotDraftRow extends RowDataPacket {
 /** 已存在的同日快照主键。 */
 interface ExistingSnapshotRow extends RowDataPacket {
   id: string;
+}
+
+/** 可根据旧数据库实际结构选择写入的公开快照字段。 */
+interface CompatibleSnapshotField {
+  column: string;
+  value: string | null;
 }
 
 /** 从当前空间记录生成公开快照的参数。 */
@@ -174,45 +181,67 @@ async function buildSnapshotInput(
 }
 
 /** 在同一事务中覆盖主表并重建空间、照片子项。 */
-async function replaceSnapshotWithConnection(connection: PoolConnection, input: SnapshotWriteInput) {
+async function replaceSnapshotWithConnection(
+  connection: PoolConnection,
+  input: SnapshotWriteInput
+): Promise<string> {
+  const [columnRows] = await connection.execute<RowDataPacket[]>('SHOW COLUMNS FROM rental_public_snapshots');
+  const existingColumns = new Set(columnRows.map((row) => String(row.Field)));
   const [existingRows] = await connection.execute<ExistingSnapshotRow[]>(
-    `SELECT id FROM rental_public_snapshots
-     WHERE rental_id = ? AND snapshot_date = ?
-     FOR UPDATE`,
+    'SELECT id FROM rental_public_snapshots WHERE rental_id = ? AND snapshot_date = ? FOR UPDATE',
     [input.rentalId, input.snapshotDate]
   );
   const snapshotId = existingRows[0]?.id ?? generateId();
 
+  /** 新版展示字段仅在数据库真实存在时参与写入。 */
+  const compatibleFields: CompatibleSnapshotField[] = [
+    { column: 'title', value: input.title },
+    { column: 'content_preview', value: input.contentPreview },
+    { column: 'cover_photo_url', value: input.coverPhotoUrl }
+  ];
+
   if (existingRows.length > 0) {
+    const assignments = ['owner_openid = ?', 'source = ?'];
+    const values: Array<string | null> = [input.ownerOpenid, input.source];
+    for (const field of compatibleFields) {
+      if (!existingColumns.has(field.column)) continue;
+      assignments.push(field.column + ' = ?');
+      values.push(field.value);
+    }
+    if (existingColumns.has('updated_at')) assignments.push('updated_at = NOW()');
+    values.push(snapshotId);
     await connection.execute(
-      `UPDATE rental_public_snapshots
-       SET owner_openid = ?, source = ?, title = ?, content_preview = ?, cover_photo_url = ?, updated_at = NOW()
-       WHERE id = ?`,
-      [
-        input.ownerOpenid,
-        input.source,
-        input.title,
-        input.contentPreview,
-        input.coverPhotoUrl,
-        snapshotId
-      ]
+      'UPDATE rental_public_snapshots SET ' + assignments.join(', ') + ' WHERE id = ?',
+      values
     );
   } else {
+    const columns = ['id', 'rental_id', 'owner_openid', 'snapshot_date', 'source'];
+    const placeholders = ['?', '?', '?', '?', '?'];
+    const values: Array<string | null> = [
+      snapshotId,
+      input.rentalId,
+      input.ownerOpenid,
+      input.snapshotDate,
+      input.source
+    ];
+    for (const field of compatibleFields) {
+      if (!existingColumns.has(field.column)) continue;
+      columns.push(field.column);
+      placeholders.push('?');
+      values.push(field.value);
+    }
+    for (const timestampColumn of ['created_at', 'updated_at']) {
+      if (!existingColumns.has(timestampColumn)) continue;
+      columns.push(timestampColumn);
+      placeholders.push('NOW()');
+    }
     await connection.execute(
-      `INSERT INTO rental_public_snapshots
-        (id, rental_id, owner_openid, snapshot_date, source, title, content_preview, cover_photo_url,
-         created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        snapshotId,
-        input.rentalId,
-        input.ownerOpenid,
-        input.snapshotDate,
-        input.source,
-        input.title,
-        input.contentPreview,
-        input.coverPhotoUrl
-      ]
+      'INSERT INTO rental_public_snapshots (' +
+        columns.join(', ') +
+        ') VALUES (' +
+        placeholders.join(', ') +
+        ')',
+      values
     );
   }
 
@@ -271,6 +300,7 @@ export async function replaceSnapshotFromDraftWithConnection(
 export async function replaceSnapshotFromDraft(
   input: ReplaceSnapshotFromDraftInput
 ): Promise<ReplaceSnapshotResult> {
+  await ensureHouseRecordSnapshotSchema();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();

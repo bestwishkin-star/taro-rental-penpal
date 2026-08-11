@@ -13,6 +13,7 @@ import type { PoolConnection, ResultSetHeader, RowDataPacket } from 'mysql2/prom
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
 import { getShanghaiDate } from '@/modules/house-records/house-record-date';
+import { ensureHouseRecordSnapshotSchema } from '@/modules/house-records/house-record-schema';
 import { replaceSnapshotFromDraftWithConnection } from '@/modules/house-records/house-record-snapshot.repository';
 
 /** 服务端草稿主表行。 */
@@ -399,6 +400,67 @@ interface PublishPhotoRow extends RowDataPacket {
   safety_status: PhotoSafetyStatus;
 }
 
+/** 首次发布屋檐故事时写入 rentals 的完整数据。 */
+interface PublishedRentalInsertInput {
+  rentalId: string;
+  userOpenid: string;
+  experience: string;
+  photoUrls: string[];
+}
+
+/** 可根据旧数据库实际结构选择写入的租房字段。 */
+interface CompatibleRentalField {
+  column: string;
+  value: string | number;
+}
+
+/**
+ * 在当前事务中兼容新旧 rentals 表创建屋檐故事。
+ * 部署迁移尚未执行时跳过新增列，避免首次发布被数据库结构漂移阻断。
+ */
+async function insertPublishedRentalWithConnection(
+  connection: PoolConnection,
+  input: PublishedRentalInsertInput
+): Promise<void> {
+  const [columnRows] = await connection.execute<RowDataPacket[]>('SHOW COLUMNS FROM rentals');
+  const existingColumns = new Set(columnRows.map((row) => String(row.Field)));
+  const columns = ['id', 'user_openid'];
+  const placeholders = ['?', '?'];
+  const values: Array<string | number> = [input.rentalId, input.userOpenid];
+
+  /** 按当前表真实存在的列追加首次发布数据。 */
+  const compatibleFields: CompatibleRentalField[] = [
+    { column: 'title', value: '一方屋檐下的生活切片' },
+    { column: 'price', value: '' },
+    { column: 'location', value: '屋檐故事' },
+    { column: 'room_type', value: '屋檐故事' },
+    { column: 'area', value: '' },
+    { column: 'experience', value: input.experience },
+    { column: 'wechat', value: '' },
+    { column: 'photos', value: JSON.stringify(input.photoUrls) },
+    { column: 'proof_status', value: 'none' },
+    { column: 'post_status', value: 'active' },
+    { column: 'status', value: 1 }
+  ];
+  for (const field of compatibleFields) {
+    if (!existingColumns.has(field.column)) continue;
+    columns.push(field.column);
+    placeholders.push('?');
+    values.push(field.value);
+  }
+
+  // 时间字段由数据库生成，兼容更早没有审计时间列的表结构。
+  for (const timestampColumn of ['created_at', 'updated_at']) {
+    if (!existingColumns.has(timestampColumn)) continue;
+    columns.push(timestampColumn);
+    placeholders.push('NOW()');
+  }
+
+  const sql =
+    'INSERT INTO rentals (' + columns.join(', ') + ') VALUES (' + placeholders.join(', ') + ')';
+  await connection.execute(sql, values);
+}
+
 /**
  * 在单一事务内校验六点并生成公开故事。
  * 重复发布返回既有 rentalId，避免用户连点产生重复内容。
@@ -408,6 +470,7 @@ export async function publishRentalDraftTransaction(
   userOpenid: string,
   enforceSafety: boolean
 ): Promise<PublishDraftResult> {
+  await ensureHouseRecordSnapshotSchema();
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -487,13 +550,12 @@ export async function publishRentalDraftTransaction(
     const photoUrls = publicPhotos.map((photo) => photo.file_url);
 
     // 故事创建和草稿状态切换必须同时成功或同时回滚。
-    await connection.execute(
-      `INSERT INTO rentals
-        (id, user_openid, title, price, location, room_type, area, experience, wechat, photos,
-         proof_status, post_status, status, created_at, updated_at)
-       VALUES (?, ?, ?, '', ?, ?, '', ?, '', ?, 'none', 'active', 1, NOW(), NOW())`,
-      [rentalId, userOpenid, '一方屋檐下的生活切片', '屋檐故事', '屋檐故事', experience, JSON.stringify(photoUrls)]
-    );
+    await insertPublishedRentalWithConnection(connection, {
+      rentalId,
+      userOpenid,
+      experience,
+      photoUrls
+    });
     await connection.execute(
       `UPDATE rental_story_drafts
        SET status = 'PUBLISHED', published_rental_id = ?, published_at = NOW(), updated_at = NOW()
