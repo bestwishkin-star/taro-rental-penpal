@@ -232,7 +232,9 @@ export default function DailyTaskPage() {
   /** 跳转房主模型并传递一次性高亮空间和快照日期。 */
   function handleViewHouse() {
     if (!completion) return;
-    const query = `updatedModule=${completion.updatedModule}&snapshotDate=${completion.snapshotDate}`;
+    const query =
+      `rentalId=${encodeURIComponent(rentalId)}` +
+      `&updatedModule=${completion.updatedModule}&snapshotDate=${completion.snapshotDate}`;
     void Taro.redirectTo({ url: `/pages/share/index?${query}` });
   }
 

@@ -34,6 +34,7 @@ const SOURCE_LABELS: Record<HouseRecordSnapshotResponse['source'], string> = {
 
 /** 指定日期只读房屋模型页。 */
 export default function HouseRecordModelPage() {
+  const activityState = Taro.getCurrentInstance().router?.params.activityState;
   const [snapshot, setSnapshot] = useState<HouseRecordSnapshotResponse | null>(null);
   const [selectedId, setSelectedId] = useState<HouseModuleId | null>(null);
   const [webglUnavailable, setWebglUnavailable] = useState(false);
@@ -97,6 +98,12 @@ export default function HouseRecordModelPage() {
         <Text className="model-header__date">{snapshot.snapshotDate}</Text>
         <Text className="model-header__source">{SOURCE_LABELS[snapshot.source]}</Text>
       </View>
+
+      {activityState && activityState !== 'PUBLIC_UPDATE' && (
+        <View className="model-activity-notice">
+          <Text>这一天留下了一条未公开的居住观察，房屋展示仍以当天公开内容为准</Text>
+        </View>
+      )}
 
       {!webglUnavailable && (
         <View className="model-explorer">

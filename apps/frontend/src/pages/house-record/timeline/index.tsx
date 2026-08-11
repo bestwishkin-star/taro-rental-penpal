@@ -51,7 +51,8 @@ export default function HouseRecordTimelinePage() {
     void Taro.navigateTo({
       url:
         `/pages/house-record/model/index?rentalId=${timeline.rentalId}` +
-        `&snapshotDate=${node.snapshotDate}`
+        `&snapshotDate=${node.snapshotDate}` +
+        `&activityState=${node.activityState}`
     });
   }
 
