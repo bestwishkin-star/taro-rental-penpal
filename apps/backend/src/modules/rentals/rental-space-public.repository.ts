@@ -13,6 +13,7 @@ import { pool } from '@/lib/mysql';
 
 import { parseSceneAnswers } from './rental-draft.repository';
 import { getSpacePromptConfig } from './rental-space-prompts';
+import { ensureRentalTrustSchema } from './rental-trust-schema';
 
 /** 已发布空间记录的公开字段。 */
 interface PublicRecordRow extends RowDataPacket {
@@ -106,6 +107,7 @@ export async function getPublishedRentalSpaces(rentalId: string): Promise<Publis
 
 /** 判断故事是否存在管理员已核验的私密居住凭证。 */
 export async function hasVerifiedRentalProof(rentalId: string): Promise<boolean> {
+  await ensureRentalTrustSchema();
   const [rows] = await pool.execute<RowDataPacket[]>(
     `SELECT 1
      FROM rental_post_proofs p

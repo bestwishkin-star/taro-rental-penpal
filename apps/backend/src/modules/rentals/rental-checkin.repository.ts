@@ -8,6 +8,8 @@ import type { RowDataPacket } from 'mysql2/promise';
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
 
+import { ensureRentalTrustSchema } from './rental-trust-schema';
+
 /** 用于校验故事发布者的最小数据库行。 */
 interface RentalOwnerRow extends RowDataPacket {
   user_openid: string;
@@ -34,6 +36,7 @@ export async function createRentalCheckin(
   userOpenid: string,
   input: Omit<CreateRentalCheckinInput, 'capturedAt'> & { capturedAt: Date }
 ): Promise<{ id: string }> {
+  await ensureRentalTrustSchema();
   const id = generateId();
   await pool.execute(
     `INSERT INTO rental_residency_checkins
@@ -47,6 +50,7 @@ export async function createRentalCheckin(
 
 /** 按拍摄时间读取可计入可信依据的有效打卡。 */
 export async function listValidRentalCheckins(rentalId: string): Promise<CheckinRow[]> {
+  await ensureRentalTrustSchema();
   const [rows] = await pool.execute<CheckinRow[]>(
     `SELECT period, captured_at
      FROM rental_residency_checkins

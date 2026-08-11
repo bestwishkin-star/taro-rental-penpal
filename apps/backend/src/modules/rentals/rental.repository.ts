@@ -19,6 +19,9 @@ import type { ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 import { pool } from '@/lib/mysql';
 import { generateId } from '@/lib/snowflake';
 
+import { ensureRentalCommentSchema } from './rental-comment-schema';
+import { ensureRentalTrustSchema } from './rental-trust-schema';
+
 const STORY_FALLBACK_TITLE = '\u5c4b\u6a90\u6545\u4e8b';
 const DEFAULT_COMMENT_AUTHOR = '\u4f4f\u53cb';
 
@@ -232,8 +235,10 @@ export async function createRental(userOpenid: string, input: CreateRentalInput)
   return { id };
 }
 
+/** 批量保存用户提交的居住凭证照片。 */
 export async function createRentalProofs(userOpenid: string, rentalId: string, proofPhotos: string[] = []): Promise<void> {
   if (proofPhotos.length === 0) return;
+  await ensureRentalTrustSchema();
   const rows = proofPhotos.map((url) => [generateId(), rentalId, userOpenid, url, new Date()]);
   await pool.query('INSERT INTO rental_post_proofs (id, rental_id, user_openid, file_url, created_at) VALUES ?', [rows]);
 }
@@ -333,7 +338,9 @@ export async function listFavorites(userOpenid: string): Promise<RentalListing[]
   return rows.map(mapRentalRow);
 }
 
+/** 读取指定屋檐故事的有效公开评论。 */
 export async function listRentalComments(rentalId: string): Promise<RentalComment[]> {
+  await ensureRentalCommentSchema();
   const [rows] = await pool.execute<RentalCommentRow[]>(
     `SELECT c.id, c.rental_id, c.user_openid, u.nickname, u.avatar_url, c.content, c.created_at
      FROM rental_post_comments c
@@ -353,7 +360,9 @@ export async function listRentalComments(rentalId: string): Promise<RentalCommen
   }));
 }
 
+/** 创建公开评论，并同步维护故事评论数量。 */
 export async function createRentalComment(userOpenid: string, rentalId: string, content: string): Promise<RentalComment> {
+  await ensureRentalCommentSchema();
   const id = generateId();
   await pool.execute(
     `INSERT INTO rental_post_comments (id, rental_id, user_openid, content, created_at, updated_at)
@@ -368,7 +377,9 @@ export async function createRentalComment(userOpenid: string, rentalId: string, 
   return comments.find((comment) => comment.id === id) ?? comments[comments.length - 1];
 }
 
+/** 软删除当前用户自己的评论，并同步维护故事评论数量。 */
 export async function deleteRentalComment(userOpenid: string, commentId: string): Promise<boolean> {
+  await ensureRentalCommentSchema();
   const [commentRows] = await pool.execute<RowDataPacket[]>(
     "SELECT rental_id FROM rental_post_comments WHERE id = ? AND user_openid = ? AND status = 'active'",
     [commentId, userOpenid]
@@ -432,7 +443,9 @@ export async function listRentalReports(): Promise<RentalReportListItem[]> {
   }));
 }
 
+/** 读取举报详情及关联的居住凭证。 */
 export async function getRentalReportById(reportId: string): Promise<RentalReportDetail | null> {
+  await ensureRentalTrustSchema();
   const rentalColumns = await readRentalColumns();
   const titleExpr = rentalColumns.has('title') ? 'r.title' : 'LEFT(r.experience, 28)';
   const [rows] = await pool.execute<RentalReportRow[]>(

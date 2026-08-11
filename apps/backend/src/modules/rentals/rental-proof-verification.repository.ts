@@ -3,8 +3,11 @@ import type { RowDataPacket } from 'mysql2/promise';
 
 import { pool } from '@/lib/mysql';
 
+import { ensureRentalTrustSchema } from './rental-trust-schema';
+
 /** 判断私密凭证是否真实存在，避免创建悬空核验记录。 */
 export async function rentalProofExists(proofId: string): Promise<boolean> {
+  await ensureRentalTrustSchema();
   const [rows] = await pool.execute<RowDataPacket[]>('SELECT 1 FROM rental_post_proofs WHERE id = ?', [proofId]);
   return rows.length > 0;
 }
@@ -15,6 +18,7 @@ export async function saveRentalProofVerification(
   status: Exclude<RentalProofVerificationStatus, 'SUBMITTED'>,
   verifiedBy: string
 ): Promise<void> {
+  await ensureRentalTrustSchema();
   await pool.execute(
     `INSERT INTO rental_proof_verifications
       (proof_id, verification_status, verified_by, verified_at, created_at, updated_at)
