@@ -21,6 +21,7 @@ import {
   createDailyTaskCaptureChallenge
 } from './daily-task-capture.repository';
 import { recordDailyTaskEvent } from './daily-task-events';
+import { ensureDailyTaskSchema } from './daily-task-schema';
 import {
   appendSnapshotActivity,
   findDailyTaskBySlot,
@@ -207,6 +208,7 @@ export async function getOrCreateTodayTask(
   rentalId: string,
   now = new Date()
 ): Promise<DailyTaskTodayResponse> {
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const taskDate = getShanghaiDate(now);
   const rangeStart = shiftDate(taskDate, -(MAX_ACTIVITY_DAYS - 1));
@@ -274,6 +276,7 @@ export async function startDailyTask(
   taskId: string,
   now = new Date()
 ): Promise<DailyTaskDetail> {
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const task = await markTaskStarted(ownerOpenid, rentalId, taskId, now);
   if (!task) throw new AppError(BizCode.DAILY_TASK_NOT_FOUND);
@@ -298,6 +301,7 @@ export async function readDailyTaskActivity(
   days = MAX_ACTIVITY_DAYS,
   now = new Date()
 ): Promise<DailyTaskActivitySummary> {
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const safeDays = Math.min(MAX_ACTIVITY_DAYS, Math.max(1, Math.trunc(days)));
   const rangeEnd = getShanghaiDate(now);
@@ -374,6 +378,7 @@ export async function completeDailyTask(
   now = new Date()
 ): Promise<CompleteDailyTaskResult> {
   const input = parseCompleteDailyTaskInput(rawInput);
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const connection = await pool.getConnection();
   let completedObservation: RentalTaskObservation | null = null;
@@ -531,6 +536,7 @@ export async function issueDailyTaskPhotoChallenge(
   taskId: string,
   now = new Date()
 ): Promise<DailyTaskPhotoChallenge> {
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const task = await findDailyTaskById(ownerOpenid, rentalId, taskId);
   if (!task) throw new AppError(BizCode.DAILY_TASK_NOT_FOUND);
@@ -566,6 +572,7 @@ export async function replaceDailyTask(
   now = new Date()
 ): Promise<DailyTaskDetail> {
   const input = parseReplaceDailyTaskInput(rawInput);
+  await ensureDailyTaskSchema();
   await assertPublishedOwner(ownerOpenid, rentalId);
   const connection = await pool.getConnection();
   let originalTaskDate: string | undefined;

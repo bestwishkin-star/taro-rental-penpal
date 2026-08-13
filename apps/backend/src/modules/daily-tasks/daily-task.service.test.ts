@@ -77,6 +77,7 @@ vi.mock('./daily-task.repository', () => ({
 
 vi.mock('./daily-task.selector', () => ({ selectDailyTaskTemplate: vi.fn() }));
 vi.mock('./daily-task-events', () => ({ recordDailyTaskEvent: vi.fn() }));
+vi.mock('./daily-task-schema', () => ({ ensureDailyTaskSchema: vi.fn() }));
 vi.mock('./daily-task-projection.service', () => ({
   projectObservation: vi.fn(),
   readOwnerSpaceFacts: vi.fn()

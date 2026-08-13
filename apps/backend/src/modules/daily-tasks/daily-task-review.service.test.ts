@@ -17,6 +17,7 @@ import type { RentalTaskObservation } from './daily-task.types';
 
 vi.mock('@/lib/mysql', () => ({ pool: { getConnection: vi.fn() } }));
 vi.mock('./daily-task-events', () => ({ recordDailyTaskEvent: vi.fn() }));
+vi.mock('./daily-task-schema', () => ({ ensureDailyTaskSchema: vi.fn() }));
 vi.mock('./daily-task.repository', () => ({
   inspectObservationPhotoReview: vi.fn(),
   listPendingObservationIds: vi.fn(),

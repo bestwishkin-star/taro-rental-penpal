@@ -21,6 +21,7 @@ vi.mock('./daily-task.repository', () => ({
   listOwnerSpaceFactHeads: vi.fn(),
   upsertSpaceFactHead: vi.fn()
 }));
+vi.mock('./daily-task-schema', () => ({ ensureDailyTaskSchema: vi.fn() }));
 
 /** 投影测试使用的卧室夜间噪声模板。 */
 const template = DAILY_TASK_TEMPLATES.find((item) => item.id === 'bedroom-night-noise')!;

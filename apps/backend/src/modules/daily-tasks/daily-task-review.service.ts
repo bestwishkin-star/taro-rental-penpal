@@ -4,6 +4,7 @@ import type { PhotoHouseholdStatus, PhotoSafetyStatus } from '@shared/contracts/
 import { pool } from '@/lib/mysql';
 
 import { recordDailyTaskEvent } from './daily-task-events';
+import { ensureDailyTaskSchema } from './daily-task-schema';
 import {
   inspectObservationPhotoReview,
   listPendingObservationIds,
@@ -125,10 +126,12 @@ async function refreshObservationIds(
 export async function refreshPendingTaskProjections(
   photoAssetId: string
 ): Promise<RefreshTaskProjectionResult> {
+  await ensureDailyTaskSchema();
   return refreshObservationIds(await listPendingObservationIdsByPhotoAsset(photoAssetId));
 }
 
 /** worker 批次结束后补偿扫描仍等待审核的任务观察。 */
 export async function refreshAllPendingTaskProjections(): Promise<RefreshTaskProjectionResult> {
+  await ensureDailyTaskSchema();
   return refreshObservationIds(await listPendingObservationIds());
 }

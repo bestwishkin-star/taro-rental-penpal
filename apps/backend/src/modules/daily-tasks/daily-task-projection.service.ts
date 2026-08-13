@@ -10,6 +10,7 @@ import type { PoolConnection } from 'mysql2/promise';
 
 import { AppError } from '@/lib/errors';
 
+import { ensureDailyTaskSchema } from './daily-task-schema';
 import {
   getOwnedRentalState,
   insertSpaceFactValue,
@@ -200,6 +201,7 @@ export async function readOwnerSpaceFacts(
   rentalId: string,
   now = new Date()
 ): Promise<OwnerSpaceFactSummary[]> {
+  await ensureDailyTaskSchema();
   const ownership = await getOwnedRentalState(ownerOpenid, rentalId);
   if (ownership === 'NOT_OWNED') throw new AppError(BizCode.RENTAL_PERMISSION_DENIED);
   if (ownership === 'NOT_PUBLISHED') throw new AppError(BizCode.RENTAL_NOT_PUBLISHED);
