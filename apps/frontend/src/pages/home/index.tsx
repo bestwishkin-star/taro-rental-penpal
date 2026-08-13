@@ -1,8 +1,7 @@
-import type { DailyTaskTodayResponse } from '@shared/contracts/daily-task';
 import type { RentalListing } from '@shared/contracts/rental';
 import { Text, View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import iconFind from '@/assets/icons/home/icon-find.png';
 import iconShare from '@/assets/icons/home/icon-share.png';
@@ -13,7 +12,10 @@ import { AppLayout } from '@/shared/ui/app-layout';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
 import { ActionCard } from './components/ActionCard';
-import { DailyObservationEntry } from './components/DailyObservationEntry';
+import {
+  DailyObservationEntry,
+  type DailyObservationEntryState
+} from './components/DailyObservationEntry';
 import { HeroCarousel } from './components/HeroCarousel';
 
 import './index.scss';
@@ -21,52 +23,74 @@ import './index.scss';
 /** 首页：提供浏览屋檐故事和记录居住体验的核心入口。 */
 export default function HomePage() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
-  const [dailyObservation, setDailyObservation] = useState<{
-    rentalId: string;
-    dailyTask: DailyTaskTodayResponse;
-  } | null>(null);
+  const requestSequenceRef = useRef(0);
+  const authEffectReadyRef = useRef(false);
+  const [dailyObservation, setDailyObservation] = useState<DailyObservationEntryState>({
+    status: isLoggedIn ? 'LOADING' : 'LOGGED_OUT'
+  });
 
-  useDidShow(() => {
-    setTabBarSelected(0);
-
-    if (!isLoggedIn) {
-      setDailyObservation(null);
+  /** 根据当前真实登录状态刷新首页今日观察，序号用于丢弃过期请求响应。 */
+  const loadDailyObservation = useCallback(async () => {
+    const requestSequence = ++requestSequenceRef.current;
+    if (!useAuthStore.getState().isLoggedIn) {
+      setDailyObservation({ status: 'LOGGED_OUT' });
       return;
     }
 
-    void fetchMyRentals()
-      .then(async (rentals) => {
-        type RentalWithUpdatedAt = RentalListing & { updatedAt?: string };
-        const publishedRentals = (rentals as RentalWithUpdatedAt[]).filter(
-          (rental) => rental.status === 'active' && (!rental.postStatus || rental.postStatus === 'active')
-        );
-        const latestRental = publishedRentals.sort((left, right) => {
-          const leftUpdatedAt = left.updatedAt ?? left.createdAt ?? '';
-          const rightUpdatedAt = right.updatedAt ?? right.createdAt ?? '';
-          return Date.parse(rightUpdatedAt) - Date.parse(leftUpdatedAt);
-        })[0];
+    setDailyObservation({ status: 'LOADING' });
+    try {
+      const rentals = await fetchMyRentals();
+      type RentalWithUpdatedAt = RentalListing & { updatedAt?: string };
+      const publishedRentals = (rentals as RentalWithUpdatedAt[]).filter(
+        (rental) => rental.status === 'active' && (!rental.postStatus || rental.postStatus === 'active')
+      );
+      const latestRental = publishedRentals.sort((left, right) => {
+        const leftUpdatedAt = left.updatedAt ?? left.createdAt ?? '';
+        const rightUpdatedAt = right.updatedAt ?? right.createdAt ?? '';
+        return Date.parse(rightUpdatedAt) - Date.parse(leftUpdatedAt);
+      })[0];
 
-        if (!latestRental) {
-          setDailyObservation(null);
-          return;
-        }
+      if (requestSequence !== requestSequenceRef.current) return;
+      if (!latestRental) {
+        setDailyObservation({ status: 'NO_RENTAL' });
+        return;
+      }
 
-        const dailyTask = await fetchTodayDailyTask(latestRental.id);
-        setDailyObservation({ rentalId: latestRental.id, dailyTask });
-      })
-      .catch(() => setDailyObservation(null));
+      const dailyTask = await fetchTodayDailyTask(latestRental.id);
+      if (requestSequence !== requestSequenceRef.current) return;
+      if (!dailyTask.completedToday && !dailyTask.task) {
+        setDailyObservation({ status: 'ERROR' });
+        return;
+      }
+      setDailyObservation({ status: 'READY', rentalId: latestRental.id, dailyTask });
+    } catch {
+      if (requestSequence !== requestSequenceRef.current) return;
+      setDailyObservation({ status: 'ERROR' });
+    }
+  }, []);
+
+  useDidShow(() => {
+    setTabBarSelected(0);
+    void loadDailyObservation();
   });
+
+  useEffect(() => {
+    // 首次展示由 useDidShow 加载；后续登录或退出登录时立即同步入口状态。
+    if (!authEffectReadyRef.current) {
+      authEffectReadyRef.current = true;
+      return;
+    }
+    void loadDailyObservation();
+  }, [isLoggedIn, loadDailyObservation]);
 
   return (
     <AppLayout mode="list" withTabBar>
       <HeroCarousel />
 
-      {dailyObservation && (
-        <DailyObservationEntry
-          rentalId={dailyObservation.rentalId}
-          dailyTask={dailyObservation.dailyTask}
-        />
-      )}
+      <DailyObservationEntry
+        state={dailyObservation}
+        onRetry={() => void loadDailyObservation()}
+      />
 
       <View className="home-actions">
         <ActionCard

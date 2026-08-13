@@ -9,9 +9,15 @@ import iconSuccess from '@/assets/icons/daily-task/icon-success.png';
 
 import './index.scss';
 
+/** 首页今日观察入口的完整可见状态。 */
+export type DailyObservationEntryState =
+  | { status: 'LOGGED_OUT' | 'LOADING' | 'NO_RENTAL' | 'ERROR' }
+  | { status: 'READY'; rentalId: string; dailyTask: DailyTaskTodayResponse };
+
+/** 首页今日观察入口参数。 */
 interface DailyObservationEntryProps {
-  rentalId: string;
-  dailyTask: DailyTaskTodayResponse;
+  state: DailyObservationEntryState;
+  onRetry: () => void;
 }
 
 /** 六个固定观察空间对应的首页短文案。 */
@@ -38,8 +44,72 @@ function formatExpiry(expiresAt: string): string {
   return `${hour}:${minute} 前完成`;
 }
 
-/** 首页今日观察入口，按任务状态进入执行页或分享页。 */
-export function DailyObservationEntry({ rentalId, dailyTask }: DailyObservationEntryProps) {
+/** 首页今日观察入口，始终展示当前加载、引导或任务状态。 */
+export function DailyObservationEntry({ state, onRetry }: DailyObservationEntryProps) {
+  if (state.status !== 'READY') {
+    const stateCopy = {
+      LOGGED_OUT: {
+        title: '登录后领取今日观察',
+        summary: '每天从真实居住细节里，随机挑一件值得留意的小事',
+        action: '去登录'
+      },
+      LOADING: {
+        title: '正在抽取今天的观察',
+        summary: '从你的房屋近况里挑选一件合适的小任务',
+        action: ''
+      },
+      NO_RENTAL: {
+        title: '先留下你的房屋实录',
+        summary: '公开一份完整记录后，每天都会收到一件随机观察',
+        action: '去记录'
+      },
+      ERROR: {
+        title: '今日观察没有加载出来',
+        summary: '房屋记录仍在，重新加载即可继续',
+        action: '重试'
+      }
+    } as const;
+    const copy = stateCopy[state.status];
+
+    /** 根据入口状态执行登录、记录或重试命令。 */
+    function handleStateAction() {
+      if (state.status === 'LOGGED_OUT') {
+        void Taro.switchTab({ url: '/pages/profile/index' });
+        return;
+      }
+      if (state.status === 'NO_RENTAL') {
+        void Taro.navigateTo({ url: '/pages/share/index' });
+        return;
+      }
+      if (state.status === 'ERROR') onRetry();
+    }
+
+    return (
+      <View
+        className={`daily-observation-entry daily-observation-entry--state daily-observation-entry--${state.status.toLowerCase()}`}
+      >
+        <View className="daily-observation-entry__category">
+          <Image src={iconEvent} className="daily-observation-entry__category-icon" mode="aspectFit" />
+          <Text className="daily-observation-entry__eyebrow">今日观察</Text>
+        </View>
+        <Text className="daily-observation-entry__title">{copy.title}</Text>
+        <View className="daily-observation-entry__footer">
+          <Text className="daily-observation-entry__summary">{copy.summary}</Text>
+          {copy.action && (
+            <View
+              className="daily-observation-entry__state-action"
+              hoverClass="daily-observation-entry__state-action--active"
+              onClick={handleStateAction}
+            >
+              <Text>{copy.action}</Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  const { rentalId, dailyTask } = state;
   const { task, completedToday, activeDays } = dailyTask;
 
   function handleClick() {

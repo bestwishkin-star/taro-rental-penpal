@@ -21,6 +21,14 @@
     background: #edf7fb;
   }
 
+  &--state {
+    gap: 10px;
+  }
+
+  &--loading {
+    opacity: 0.72;
+  }
+
   &__header,
   &__footer,
   &__category,
@@ -97,6 +105,23 @@
     font-size: 13px;
     font-weight: 700;
     line-height: 1.4;
+  }
+
+  &__state-action {
+    flex-shrink: 0;
+    min-width: 54px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    color: #fff;
+    background: #d4675c;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  &__state-action--active {
+    opacity: 0.82;
   }
 
   &__success-icon {
