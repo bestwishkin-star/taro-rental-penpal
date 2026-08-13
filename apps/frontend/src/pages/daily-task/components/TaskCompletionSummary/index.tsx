@@ -34,17 +34,27 @@ function getProjectionCopy(status: CompleteDailyTaskResult['publicProjectionStat
 export function TaskCompletionSummary({ result, onViewHouse }: TaskCompletionSummaryProps) {
   return (
     <View className="daily-task-completion">
-      <Image src={completeGlow} className="daily-task-completion__glow" mode="aspectFit" />
-      <Image src={iconSuccess} className="daily-task-completion__icon" mode="aspectFit" />
-      <Text className="daily-task-completion__eyebrow">今日观察已留下</Text>
-      <Text className="daily-task-completion__title">
-        {MODULE_LABELS[result.updatedModule]}亮起了一点
-      </Text>
-      <Text className="daily-task-completion__copy">{getProjectionCopy(result.publicProjectionStatus)}</Text>
-      <View className="daily-task-completion__freshness">
-        <Text className="daily-task-completion__freshness-value">{result.freshnessPercent}%</Text>
-        <Text className="daily-task-completion__freshness-label">当前空间资料新鲜度</Text>
+      <View className="daily-task-completion__visual">
+        <Image src={completeGlow} className="daily-task-completion__glow" mode="aspectFit" />
+        <Image src={iconSuccess} className="daily-task-completion__icon" mode="aspectFit" />
       </View>
+
+      <View className="daily-task-completion__message">
+        <Text className="daily-task-completion__eyebrow">今日观察已留下</Text>
+        <Text className="daily-task-completion__title">
+          {MODULE_LABELS[result.updatedModule]}亮起了一点
+        </Text>
+        <Text className="daily-task-completion__copy">{getProjectionCopy(result.publicProjectionStatus)}</Text>
+      </View>
+
+      <View className="daily-task-completion__freshness">
+        <View className="daily-task-completion__freshness-copy">
+          <Text className="daily-task-completion__freshness-label">空间资料新鲜度</Text>
+          <Text className="daily-task-completion__freshness-hint">本次观察更新后</Text>
+        </View>
+        <Text className="daily-task-completion__freshness-value">{result.freshnessPercent}%</Text>
+      </View>
+
       <View
         className="daily-task-completion__action"
         hoverClass="daily-task-completion__action--active"
