@@ -1,7 +1,7 @@
 import type { HouseRecordSnapshotResponse } from '@shared/contracts/house-record';
 import type { HouseModuleId } from '@shared/contracts/rental-space';
 import { Text, View } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import { useEffect, useMemo, useState } from 'react';
 
 import { fetchHouseRecordSnapshot } from '@/shared/api/house-record';
@@ -40,6 +40,11 @@ export default function HouseRecordModelPage() {
   const [webglUnavailable, setWebglUnavailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+
+  useDidShow(() => {
+    // 开发者工具可能缓存旧页面 JSON，进入页面时主动校准导航栏标题。
+    void Taro.setNavigationBarTitle({ title: '当日房屋实录' });
+  });
 
   // 路由参数同时决定房屋和自然日，缺失任一参数都不请求公开接口。
   useEffect(() => {
@@ -93,7 +98,7 @@ export default function HouseRecordModelPage() {
   }
 
   return (
-    <AppLayout mode="list" contentClassName="model-page">
+    <AppLayout mode="native" contentClassName="model-page">
       <View className="model-header">
         <Text className="model-header__date">{snapshot.snapshotDate}</Text>
         <Text className="model-header__source">{SOURCE_LABELS[snapshot.source]}</Text>
