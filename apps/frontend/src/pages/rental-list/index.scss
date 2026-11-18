@@ -3,7 +3,7 @@
   padding-top: 12px;
   padding-right: 16px;
   padding-left: 16px;
-  background: #faf6f0;
+  background: var(--color-page);
 
   &__empty {
     display: flex;
@@ -14,9 +14,9 @@
   }
 
   &__empty-text {
-    color: #b0a898;
-    font-size: 14px;
-    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--color-text-muted);
+    font-size: var(--font-body);
+    font-family: var(--font-family);
   }
 
   &__item {
@@ -32,14 +32,14 @@
     top: 8px;
     left: 8px;
     z-index: 1;
-    background: rgba(0, 0, 0, 0.45);
-    border-radius: 4px;
+    background: var(--color-overlay);
+    border-radius: var(--radius-xs);
     padding: 2px 8px;
   }
 
   &__badge-text {
-    color: #fff;
-    font-size: 11px;
+    color: var(--color-on-image);
+    font-size: var(--font-caption);
   }
 
   &__status-btn {
@@ -55,8 +55,8 @@
   }
 
   &__status-btn-text {
-    font-size: 12px;
-    color: #c67a52;
+    font-size: var(--font-caption);
+    color: var(--color-primary-text);
     padding: 4px 0;
   }
 }

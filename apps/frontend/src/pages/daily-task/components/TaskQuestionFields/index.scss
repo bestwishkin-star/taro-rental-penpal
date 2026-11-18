@@ -1,3 +1,5 @@
+@use '../../../../styles/controls';
+
 .daily-task-question-fields {
   display: flex;
   flex-direction: column;
@@ -10,9 +12,9 @@
   }
 
   &__label {
-    color: #312922;
-    font-size: 16px;
-    font-weight: 700;
+    color: var(--color-text);
+    font-size: var(--font-subtitle);
+    font-weight: var(--font-weight-bold);
     line-height: 1.5;
   }
 
@@ -29,22 +31,22 @@
     gap: 12px;
     box-sizing: border-box;
     padding: 12px 14px;
-    border: 1px solid #e4dcd2;
-    border-radius: 8px;
-    color: #5f554b;
-    background: #fffdfa;
-    font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    color: var(--color-text-secondary);
+    background: var(--color-surface);
+    font-size: var(--font-body);
     line-height: 1.5;
 
     &--selected {
-      border-color: #ef796d;
-      color: #8e3e38;
-      background: #fff3f0;
+      border-color: var(--color-primary-text);
+      color: var(--color-primary-text);
+      background: var(--color-primary-soft);
 
       .daily-task-question-fields__choice {
-        border-color: #ef796d;
-        background: #ef796d;
-        box-shadow: inset 0 0 0 4px #fff3f0;
+        border-color: var(--color-primary-text);
+        background: var(--color-primary);
+        box-shadow: inset 0 0 0 4px var(--color-primary-soft);
       }
     }
 
@@ -58,44 +60,46 @@
     height: 18px;
     flex-shrink: 0;
     box-sizing: border-box;
-    border: 2px solid #c7bbae;
+    border: 2px solid var(--color-border-strong);
     border-radius: 50%;
   }
 
   &__number-row {
+    @include controls.field-focus;
     display: flex;
     height: 52px;
     align-items: center;
     gap: 10px;
     box-sizing: border-box;
     padding: 0 14px;
-    border: 1px solid #d9dfe6;
-    border-radius: 8px;
-    background: #fafdff;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
   }
 
   &__number {
     flex: 1;
     min-width: 0;
-    color: #27313a;
-    font-size: 18px;
+    color: var(--color-text);
+    font-size: var(--font-title);
   }
 
   &__unit {
-    color: #73808b;
-    font-size: 13px;
+    color: var(--color-text-secondary);
+    font-size: var(--font-small);
   }
 
   &__textarea {
+    @include controls.field-focus;
     width: 100%;
     min-height: 128px;
     box-sizing: border-box;
     padding: 14px;
-    border: 1px solid #e4dcd2;
-    border-radius: 8px;
-    color: #312922;
-    background: #fffdfa;
-    font-size: 14px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    background: var(--color-surface);
+    font-size: var(--font-body);
     line-height: 1.7;
   }
 }

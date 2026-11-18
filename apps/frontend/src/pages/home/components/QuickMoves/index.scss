@@ -1,0 +1,109 @@
+.quick-moves {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  margin-top: 22px;
+
+  &__title {
+    color: var(--color-text);
+    font-size: var(--font-title);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.45;
+  }
+
+  &__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.76fr) minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  &__action {
+    display: flex;
+    min-height: 144px;
+    box-sizing: border-box;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
+    border-radius: var(--radius-card);
+    transition: opacity 160ms ease, transform 160ms ease;
+  }
+
+  &__action--active {
+    opacity: 0.9;
+    transform: scale(0.98);
+  }
+
+  &__action--stories {
+    padding: 16px;
+    background: var(--color-surface-inverse);
+  }
+
+  &__action--record {
+    padding: 15px;
+    background: var(--color-primary-soft);
+  }
+
+  &__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__stories-icon {
+    width: 24px;
+    height: 24px;
+  }
+
+  &__arrow {
+    width: 18px;
+    height: 18px;
+  }
+
+  &__copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__stories-title {
+    color: var(--color-on-inverse);
+    font-size: var(--font-subtitle);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.44;
+  }
+
+  &__stories-hint {
+    color: var(--color-on-dark-muted);
+    font-size: var(--font-caption);
+    line-height: 1.45;
+  }
+
+  &__record-icon-wrap {
+    display: flex;
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-card);
+    background: var(--color-primary-soft);
+  }
+
+  &__record-icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  &__record-title {
+    color: var(--color-text);
+    font-size: var(--font-body);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.35;
+  }
+
+  &__record-hint {
+    color: var(--color-text-secondary);
+    font-size: var(--font-caption);
+    line-height: 1.4;
+  }
+}

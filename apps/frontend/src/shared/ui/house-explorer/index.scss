@@ -8,9 +8,9 @@
   position: relative;
   height: 344px;
   overflow: hidden;
-  border: 1px solid rgba(66, 75, 70, 0.14);
-  border-radius: 8px;
-  background: #eef1ed;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
 }
 
 .house-explorer__canvas {
@@ -32,29 +32,29 @@
   align-items: baseline;
   gap: 7px;
   padding: 7px 10px;
-  border: 1px solid rgba(58, 69, 64, 0.14);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-overlay);
 }
 
 .house-explorer__progress-label {
-  color: #66716b;
-  font-size: 11px;
-  font-weight: 600;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
+  font-weight: var(--font-weight-semibold);
 }
 
 .house-explorer__progress-value {
-  color: #9a6030;
-  font-size: 16px;
-  font-weight: 800;
+  color: var(--color-primary-text);
+  font-size: var(--font-subtitle);
+  font-weight: var(--font-weight-bold);
 }
 
 .house-explorer__zoom-controls {
   display: flex;
   overflow: hidden;
-  border: 1px solid rgba(58, 69, 64, 0.14);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-overlay);
 }
 
 .house-explorer__zoom-button {
@@ -66,20 +66,20 @@
 }
 
 .house-explorer__zoom-button--pressed {
-  background: rgba(45, 106, 79, 0.12);
+  background: var(--color-primary-soft);
 }
 
 .house-explorer__zoom-divider {
   width: 1px;
   height: 20px;
   margin: 8px 0;
-  background: rgba(58, 69, 64, 0.14);
+  background: var(--color-border);
 }
 
 .house-explorer__zoom-icon {
-  color: #34433c;
-  font-size: 22px;
-  font-weight: 500;
+  color: var(--color-text);
+  font-size: var(--font-page-title);
+  font-weight: var(--font-weight-medium);
   line-height: 1;
 }
 
@@ -89,8 +89,8 @@
   align-items: center;
   gap: 7px;
   padding: 6px 9px;
-  border-radius: 5px;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-overlay);
   pointer-events: none;
 }
 
@@ -98,13 +98,13 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #cf7e3b;
+  background: var(--color-primary);
   animation: house-explorer-loading 1.1s ease-in-out infinite;
 }
 
 .house-explorer__loading-text {
-  color: #66716b;
-  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
   line-height: 1.2;
 }
 

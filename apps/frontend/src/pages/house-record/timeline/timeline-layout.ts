@@ -1,15 +1,22 @@
-/** 节点沿树干左右交替分布的稳定横坐标序列。 */
-const X_PATTERN = [164, 64, 236, 280, 116, 36, 208, 276];
+/** 设计稿背景与日期节点共用 375 × 1125 坐标系，只等比缩放。 */
+export const TREE_SCENE_SIZE = { width: 375, height: 1125 } as const;
 
-/**
- * 只为接口真实返回的日期生成视觉坐标，不补齐未更新日期。
- * 服务端按日期倒序返回，因此数组首项始终位于树冠顶部。
- */
-export function createTimelineLayout<T extends { snapshotDate: string; isLatest: boolean }>(nodes: T[]) {
-  return nodes.map((node, index) => ({
-    ...node,
-    x: X_PATTERN[index % X_PATTERN.length],
-    y: 144 + index * 92,
-    variant: node.isLatest || index % 6 === 5 ? ('apple' as const) : ('blossom' as const)
-  }));
+/** 顺着不规则枝条放置：长短、方向和节点间隔均取自 Pencil 设计稿。 */
+const BRANCH_ANCHORS = [
+  [238, 114],
+  [137, 214], [68, 207],
+  [235, 304], [314, 287],
+  [135, 441], [64, 431],
+  [225, 517], [310, 501],
+  [160, 656], [74, 640],
+  [244, 768], [318, 747],
+  [150, 882], [70, 870]
+] as const;
+
+/** 展示接口选出的今天与历史节点，花果仅由是否上报决定。 */
+export function createTimelineLayout<T extends { snapshotDate: string; hasRecord: boolean }>(nodes: T[]) {
+  return nodes.slice(0, BRANCH_ANCHORS.length).map((node, index) => {
+    const [x, y] = BRANCH_ANCHORS[index];
+    return { ...node, x, y, order: index, variant: node.hasRecord ? ('apple' as const) : ('blossom' as const) };
+  });
 }

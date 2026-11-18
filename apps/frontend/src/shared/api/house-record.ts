@@ -24,11 +24,9 @@ export function fetchHouseRecords(query?: HouseRecordListQuery) {
   return httpRequest<HouseRecordListing[]>('/house-records', { params });
 }
 
-/** 读取指定房屋最近 30 天成长节点。 */
+/** 读取指定房屋的今天及最近 14 个有记录的历史日期节点。 */
 export function fetchHouseRecordTimeline(rentalId: string) {
-  return httpRequest<HouseRecordTimelineResponse>(`/house-records/${rentalId}/timeline`, {
-    params: { days: '30' }
-  });
+  return httpRequest<HouseRecordTimelineResponse>(`/house-records/${rentalId}/timeline`);
 }
 
 /** 读取指定自然日固化的公开房屋快照。 */

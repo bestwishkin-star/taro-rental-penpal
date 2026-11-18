@@ -12,14 +12,14 @@
 }
 
 .share-hero__title {
-  color: #211810;
-  font-size: 24px;
-  font-weight: 800;
+  color: var(--color-text);
+  font-size: var(--font-page-title);
+  font-weight: var(--font-weight-bold);
   line-height: 1.28;
 }
 
 .share-hero__subtitle {
-  color: #6b5b48;
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-body);
   line-height: 1.65;
 }

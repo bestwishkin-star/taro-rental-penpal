@@ -1,3 +1,5 @@
+import themeTokens from './styles/tokens.json';
+
 export default defineAppConfig({
   pages: [
     'pages/home/index',
@@ -23,16 +25,16 @@ export default defineAppConfig({
   ],
   window: {
     backgroundTextStyle: 'light',
-    navigationBarBackgroundColor: '#f5efe6',
+    navigationBarBackgroundColor: themeTokens['color-page'],
     navigationBarTitleText: 'Rental Penpal',
     navigationBarTextStyle: 'black',
-    backgroundColor: '#f7f3ec'
+    backgroundColor: themeTokens['color-page']
   },
   tabBar: {
     custom: true,
-    color: '#8b7761',
-    selectedColor: '#2d241b',
-    backgroundColor: '#fffaf2',
+    color: themeTokens['color-text-muted'],
+    selectedColor: themeTokens['color-primary'],
+    backgroundColor: themeTokens['color-surface'],
     borderStyle: 'black',
     list: [
       {

@@ -1,33 +1,91 @@
+import type { HouseRecordListing } from '@shared/contracts/house-record';
 import type { RentalListing } from '@shared/contracts/rental';
-import { Text, View } from '@tarojs/components';
+import { View } from '@tarojs/components';
 import Taro, { useDidShow } from '@tarojs/taro';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import iconFind from '@/assets/icons/home/icon-find.png';
-import iconShare from '@/assets/icons/home/icon-share.png';
 import { fetchTodayDailyTask } from '@/shared/api/daily-task';
+import {
+  fetchHouseRecords,
+  fetchHouseRecordSnapshot,
+  fetchHouseRecordTimeline
+} from '@/shared/api/house-record';
 import { fetchMyRentals } from '@/shared/api/services';
 import { useAuthStore } from '@/shared/store';
 import { AppLayout } from '@/shared/ui/app-layout';
 import { setTabBarSelected } from '@/shared/utils/tab-bar';
 
-import { ActionCard } from './components/ActionCard';
 import {
   DailyObservationEntry,
   type DailyObservationEntryState
 } from './components/DailyObservationEntry';
-import { HeroCarousel } from './components/HeroCarousel';
+import { HomeGreeting } from './components/HomeGreeting';
+import { PrivacyNote } from './components/PrivacyNote';
+import { QuickMoves } from './components/QuickMoves';
+import { RoofStories, type RoofStoryItem } from './components/RoofStories';
 
 import './index.scss';
+
+/** 将任意长度的公开正文压缩成适合图片叠字的一行短标题。 */
+function buildStoryTitle(text: string | undefined, fallback: string): string {
+  const normalized = (text || fallback).replace(/\s+/g, ' ').trim();
+  return normalized.length > 18 ? `${normalized.slice(0, 18)}...` : normalized;
+}
 
 /** 首页：提供浏览屋檐故事和记录居住体验的核心入口。 */
 export default function HomePage() {
   const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const navigationInset = (Taro.getSystemInfoSync().statusBarHeight ?? 20) + 44;
   const requestSequenceRef = useRef(0);
   const authEffectReadyRef = useRef(false);
   const [dailyObservation, setDailyObservation] = useState<DailyObservationEntryState>({
     status: isLoggedIn ? 'LOADING' : 'LOGGED_OUT'
   });
+  const [roofStories, setRoofStories] = useState<RoofStoryItem[]>([]);
+  const [roofStoriesLoading, setRoofStoriesLoading] = useState(true);
+
+  /** 将发现列表房屋与最新成长节点组合为可直达点位的首页片段。 */
+  const loadRoofStories = useCallback(async () => {
+    setRoofStoriesLoading(true);
+    try {
+      const listings = await fetchHouseRecords({ page: 1, pageSize: 4 });
+      const candidates = await Promise.all(
+        listings.map(async (listing: HouseRecordListing): Promise<RoofStoryItem | null> => {
+          try {
+            const timeline = await fetchHouseRecordTimeline(listing.rentalId);
+            const latestNode =
+              timeline.nodes.find((node) => node.isLatest) ??
+              timeline.nodes.find((node) => node.snapshotDate === listing.latestSnapshotDate) ??
+              timeline.nodes[0];
+            const module = latestNode?.updatedModules[0];
+            if (!latestNode || !module) return null;
+            const snapshot = await fetchHouseRecordSnapshot(listing.rentalId, latestNode.snapshotDate);
+            const pointRecord = snapshot.records.find((record) => record.module === module);
+            const pointSummary =
+              pointRecord?.eventText ||
+              pointRecord?.observations[0]?.value ||
+              latestNode.contentPreview ||
+              listing.contentPreview;
+            return {
+              rentalId: listing.rentalId,
+              snapshotDate: latestNode.snapshotDate,
+              module,
+              title: buildStoryTitle(pointSummary, `${listing.title}的最新记录`),
+              author: listing.author.nickname,
+              coverPhoto: pointRecord?.publicPhotos[0] || latestNode.coverPhoto || listing.coverPhoto
+            };
+          } catch {
+            return null;
+          }
+        })
+      );
+      setRoofStories(candidates.filter((item): item is RoofStoryItem => Boolean(item)).slice(0, 2));
+    } catch {
+      setRoofStories([]);
+    } finally {
+      setRoofStoriesLoading(false);
+    }
+  }, []);
 
   /** 根据当前真实登录状态刷新首页今日观察，序号用于丢弃过期请求响应。 */
   const loadDailyObservation = useCallback(async () => {
@@ -72,6 +130,7 @@ export default function HomePage() {
   useDidShow(() => {
     setTabBarSelected(0);
     void loadDailyObservation();
+    void loadRoofStories();
   });
 
   useEffect(() => {
@@ -84,32 +143,16 @@ export default function HomePage() {
   }, [isLoggedIn, loadDailyObservation]);
 
   return (
-    <AppLayout mode="list" withTabBar>
-      <HeroCarousel />
-
-      <DailyObservationEntry
-        state={dailyObservation}
-        onRetry={() => void loadDailyObservation()}
-      />
-
-      <View className="home-actions">
-        <ActionCard
-          icon={iconFind}
-          label="翻看屋檐故事"
-          desc="看看其他人的真实体验、生活细节和避坑提醒"
-          onClick={() => void Taro.switchTab({ url: '/pages/find/index' })}
+    <AppLayout mode="list" withTabBar contentClassName="home-page">
+      <HomeGreeting date={new Date()} topInset={navigationInset} />
+      <View className="home-page__content">
+        <DailyObservationEntry
+          state={dailyObservation}
+          onRetry={() => void loadDailyObservation()}
         />
-        <ActionCard
-          icon={iconShare}
-          label="写下一方屋檐下"
-          desc="把你的居住冷暖写成一篇屋檐记"
-          onClick={() => void Taro.navigateTo({ url: '/pages/share/index' })}
-        />
-      </View>
-
-      <View className="home-tips">
-        <Text className="home-tips__title">屋檐记发布提示</Text>
-        <Text className="home-tips__text">落笔前请隐藏手机号、门牌号、合同号等隐私信息，凭证仅供平台复核。</Text>
+        <RoofStories items={roofStories} loading={roofStoriesLoading} />
+        <QuickMoves />
+        <PrivacyNote />
       </View>
     </AppLayout>
   );

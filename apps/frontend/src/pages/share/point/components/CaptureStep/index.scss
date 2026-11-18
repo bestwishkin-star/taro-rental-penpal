@@ -14,14 +14,14 @@
 .capture-step__privacy-option {
   min-width: 0;
   padding: 12px;
-  border: 1px solid #d9d1c7;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 .capture-step__privacy-option--active {
-  border-color: #2c7664;
-  background: #edf7f3;
+  border-color: var(--color-primary-text);
+  background: var(--color-primary-soft);
 }
 
 .capture-step__privacy-title,
@@ -30,15 +30,15 @@
 }
 
 .capture-step__privacy-title {
-  color: #28231e;
-  font-size: 14px;
-  font-weight: 700;
+  color: var(--color-text);
+  font-size: var(--font-body);
+  font-weight: var(--font-weight-bold);
 }
 
 .capture-step__privacy-copy {
   margin-top: 4px;
-  color: #776d63;
-  font-size: 11px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
   line-height: 1.4;
 }
 
@@ -48,9 +48,9 @@
   align-items: center;
   justify-content: center;
   flex-direction: column;
-  border: 1px dashed #6b8f84;
-  border-radius: 6px;
-  background: #f3f8f6;
+  border: 1px dashed var(--color-primary-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
 }
 
 .capture-step__camera--disabled {
@@ -58,15 +58,15 @@
 }
 
 .capture-step__camera-title {
-  color: #1f4f43;
-  font-size: 16px;
-  font-weight: 700;
+  color: var(--color-primary-text);
+  font-size: var(--font-subtitle);
+  font-weight: var(--font-weight-bold);
 }
 
 .capture-step__camera-copy {
   margin-top: 6px;
-  color: #6f7f79;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
 }
 
 .capture-step__photo {
@@ -75,15 +75,15 @@
   gap: 12px;
   margin-top: 12px;
   padding: 10px;
-  border: 1px solid #e3ddd5;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
 }
 
 .capture-step__photo-image {
   width: 88px;
   height: 72px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 .capture-step__photo-body {
@@ -92,8 +92,8 @@
 }
 
 .capture-step__photo-status {
-  color: #596c66;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
 }
 
 .capture-step__photo-actions {
@@ -102,10 +102,10 @@
 }
 
 .capture-step__photo-action {
-  color: #286b8d;
-  font-size: 12px;
+  color: var(--color-primary-text);
+  font-size: var(--font-caption);
 }
 
 .capture-step__photo-action--danger {
-  color: #a44b42;
+  color: var(--color-danger);
 }

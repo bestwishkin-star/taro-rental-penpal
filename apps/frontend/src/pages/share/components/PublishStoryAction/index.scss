@@ -1,9 +1,11 @@
+@use '../../../../styles/controls';
+
 .publish-story-action {
   margin-top: 16px;
   padding: 16px;
-  border: 1px solid #cddbd6;
-  border-radius: 8px;
-  background: #f1f7f4;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-primary-soft);
 }
 
 .publish-story-action__copy {
@@ -13,30 +15,22 @@
 }
 
 .publish-story-action__title {
-  color: #1d4f42;
-  font-size: 16px;
-  font-weight: 800;
+  color: var(--color-primary-text);
+  font-size: var(--font-subtitle);
+  font-weight: var(--font-weight-bold);
 }
 
 .publish-story-action__subtitle {
-  color: #63756f;
-  font-size: 12px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-caption);
   line-height: 1.5;
 }
 
 .publish-story-action__button {
-  display: flex;
-  min-height: 46px;
-  align-items: center;
-  justify-content: center;
+  @include controls.button(primary);
   margin-top: 14px;
-  border-radius: 6px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  background: #245f51;
 }
 
 .publish-story-action__button--disabled {
-  opacity: 0.5;
+  opacity: var(--opacity-disabled);
 }

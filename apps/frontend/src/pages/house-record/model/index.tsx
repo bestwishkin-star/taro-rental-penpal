@@ -5,11 +5,11 @@ import Taro, { useDidShow } from '@tarojs/taro';
 import { useEffect, useMemo, useState } from 'react';
 
 import { fetchHouseRecordSnapshot } from '@/shared/api/house-record';
+import { AppLayout } from '@/shared/ui/app-layout';
 import {
   HouseExplorer,
   type HouseModule
 } from '@/shared/ui/house-explorer';
-import { AppLayout } from '@/shared/ui/app-layout';
 
 import { SnapshotSpacePanel } from './components/SnapshotSpacePanel';
 
@@ -34,7 +34,8 @@ const SOURCE_LABELS: Record<HouseRecordSnapshotResponse['source'], string> = {
 
 /** 指定日期只读房屋模型页。 */
 export default function HouseRecordModelPage() {
-  const activityState = Taro.getCurrentInstance().router?.params.activityState;
+  const { activityState, rentalId, snapshotDate, module: requestedModule } =
+    Taro.getCurrentInstance().router?.params ?? {};
   const [snapshot, setSnapshot] = useState<HouseRecordSnapshotResponse | null>(null);
   const [selectedId, setSelectedId] = useState<HouseModuleId | null>(null);
   const [webglUnavailable, setWebglUnavailable] = useState(false);
@@ -46,19 +47,31 @@ export default function HouseRecordModelPage() {
     void Taro.setNavigationBarTitle({ title: '当日房屋实录' });
   });
 
+  useEffect(() => {
+    if (!snapshot || !requestedModule || !selectedId) return;
+    // 首页片段入口需要直达点位详情，成长树入口仍停留在模型顶部。
+    Taro.nextTick(() => {
+      void Taro.pageScrollTo({ selector: '#snapshot-point-detail', duration: 280 });
+    });
+  }, [requestedModule, selectedId, snapshot]);
+
   // 路由参数同时决定房屋和自然日，缺失任一参数都不请求公开接口。
   useEffect(() => {
-    const params = Taro.getCurrentInstance().router?.params ?? {};
-    if (!params.rentalId || !params.snapshotDate) {
+    if (!rentalId || !snapshotDate) {
       setFailed(true);
       setLoading(false);
       return;
     }
 
-    fetchHouseRecordSnapshot(params.rentalId, params.snapshotDate)
+    fetchHouseRecordSnapshot(rentalId, snapshotDate)
       .then((data) => {
         setSnapshot(data);
-        setSelectedId(data.records[0]?.module ?? null);
+        // 首页片段携带点位时优先选中，否则保持成长树进入时的首条记录行为。
+        const initialModule = requestedModule as HouseModuleId | undefined;
+        const selectedModule = data.records.some((record) => record.module === initialModule)
+          ? initialModule
+          : data.records[0]?.module;
+        setSelectedId(selectedModule ?? null);
         setFailed(false);
       })
       .catch(() => {
@@ -66,7 +79,7 @@ export default function HouseRecordModelPage() {
         void Taro.showToast({ title: '这一天的房屋实录暂时无法打开', icon: 'none' });
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [rentalId, requestedModule, snapshotDate]);
 
   /** 将快照记录映射为三维热点完成状态。 */
   const modules = useMemo<HouseModule[]>(() => {
@@ -131,7 +144,11 @@ export default function HouseRecordModelPage() {
           ))}
         </View>
       ) : (
-        selectedRecord && <SnapshotSpacePanel record={selectedRecord} />
+        selectedRecord && (
+          <View id="snapshot-point-detail">
+            <SnapshotSpacePanel record={selectedRecord} />
+          </View>
+        )
       )}
     </AppLayout>
   );

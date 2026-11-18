@@ -1,13 +1,16 @@
+@use '../../../../styles/controls';
+
 .search-bar {
+  @include controls.field-focus;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 9px;
   min-height: 44px;
   padding: 0 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(109, 84, 48, 0.12);
+  border-radius: var(--radius-card);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-border);
 }
 
 .search-bar__icon {
@@ -19,11 +22,11 @@
 .search-bar__input {
   flex: 1;
   height: 44px;
-  color: #2d241b;
-  font-size: 14px;
-  font-weight: 400;
+  color: var(--color-text);
+  font-size: var(--font-body);
+  font-weight: var(--font-weight-regular);
 }
 
 .search-bar__placeholder {
-  color: #a99684;
+  color: var(--color-text-muted);
 }

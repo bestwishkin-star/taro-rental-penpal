@@ -1,13 +1,14 @@
 import type { HouseRecordTimelineNode, HouseRecordTimelineResponse } from '@shared/contracts/house-record';
 import { Image, Text, View } from '@tarojs/components';
-import Taro from '@tarojs/taro';
-import { useEffect, useState } from 'react';
+import Taro, { useDidHide, useDidShow, useUnload } from '@tarojs/taro';
+import { useCallback, useRef, useState } from 'react';
 
 import { fetchHouseRecordTimeline } from '@/shared/api/house-record';
 import { frontendEnv } from '@/shared/config/env';
 import { AppLayout } from '@/shared/ui/app-layout';
 
 import { GrowthTree } from './components/GrowthTree';
+import { resolveTimelineNavigation } from './timeline-navigation';
 
 import './index.scss';
 
@@ -24,36 +25,58 @@ export default function HouseRecordTimelinePage() {
   const [timeline, setTimeline] = useState<HouseRecordTimelineResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const requestSequenceRef = useRef(0);
+  const hasTimelineRef = useRef(false);
 
-  useEffect(() => {
+  /** 每次页面重新显示时读取最新成长节点，避免复用页面实例后仍展示旧数据。 */
+  const refreshTimeline = useCallback(async () => {
     const rentalId = Taro.getCurrentInstance().router?.params.rentalId;
+    const requestSequence = ++requestSequenceRef.current;
     if (!rentalId) {
       setFailed(true);
       setLoading(false);
       return;
     }
 
-    fetchHouseRecordTimeline(rentalId)
-      .then((data) => {
-        setTimeline(data);
-        setFailed(false);
-      })
-      .catch(() => {
-        setFailed(true);
-        void Taro.showToast({ title: '成长记录暂时无法打开', icon: 'none' });
-      })
-      .finally(() => setLoading(false));
+    // 首次进入显示加载态；已有内容刷新时保留树场景，避免页面闪烁。
+    if (!hasTimelineRef.current) setLoading(true);
+    try {
+      const data = await fetchHouseRecordTimeline(rentalId);
+      if (requestSequence !== requestSequenceRef.current) return;
+      hasTimelineRef.current = true;
+      setTimeline(data);
+      setFailed(false);
+    } catch {
+      if (requestSequence !== requestSequenceRef.current) return;
+      setFailed(true);
+      void Taro.showToast({ title: '成长记录暂时无法打开', icon: 'none' });
+    } finally {
+      if (requestSequence === requestSequenceRef.current) setLoading(false);
+    }
   }, []);
 
-  /** 打开某个自然日固化的只读房屋模型。 */
-  function openSnapshot(node: HouseRecordTimelineNode) {
+  useDidShow(() => {
+    setIsVisible(true);
+    void refreshTimeline();
+  });
+
+  useDidHide(() => setIsVisible(false));
+
+  /** 页面卸载后使仍在途的请求失效，阻止异步响应继续更新状态。 */
+  useUnload(() => {
+    requestSequenceRef.current += 1;
+  });
+
+  /** 根据上报状态和房主身份进入今日上报或当日快照。 */
+  function handleSelectDate(node: HouseRecordTimelineNode) {
     if (!timeline) return;
-    void Taro.navigateTo({
-      url:
-        `/pages/house-record/model/index?rentalId=${timeline.rentalId}` +
-        `&snapshotDate=${node.snapshotDate}` +
-        `&activityState=${node.activityState}`
-    });
+    const target = resolveTimelineNavigation(timeline, node);
+    if ('url' in target) {
+      void Taro.navigateTo({ url: target.url });
+    } else {
+      void Taro.showToast({ title: target.message, icon: 'none' });
+    }
   }
 
   if (loading) {
@@ -91,14 +114,7 @@ export default function HouseRecordTimelinePage() {
         </View>
       </View>
 
-      {timeline.nodes.length > 0 ? (
-        <GrowthTree nodes={timeline.nodes} onSelect={openSnapshot} />
-      ) : (
-        <View className="timeline-empty">
-          <Text className="timeline-empty__title">枝头还没有新的生活痕迹</Text>
-          <Text className="timeline-empty__text">记录者更新后，真实日期会从这里长出来</Text>
-        </View>
-      )}
+      <GrowthTree key={timeline.rentalId} nodes={timeline.nodes} isOwner={timeline.isOwner} isVisible={isVisible} onSelect={handleSelectDate} />
     </AppLayout>
   );
 }

@@ -1,0 +1,19 @@
+.home-greeting {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 16px 18px;
+
+  &__eyebrow {
+    color: var(--color-text-secondary);
+    font-size: var(--font-caption);
+    line-height: 1.42;
+  }
+
+  &__title {
+    color: var(--color-text);
+    font-size: var(--font-page-title);
+    font-weight: var(--font-weight-bold);
+    line-height: 1.46;
+  }
+}

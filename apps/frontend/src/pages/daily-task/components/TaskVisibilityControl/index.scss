@@ -3,8 +3,8 @@
   flex-direction: column;
   gap: 20px;
   padding: 20px;
-  border-radius: 8px;
-  background: #fffdfa;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
 
   &__group {
     display: flex;
@@ -13,9 +13,9 @@
   }
 
   &__title {
-    color: #312922;
-    font-size: 15px;
-    font-weight: 700;
+    color: var(--color-text);
+    font-size: var(--font-body-lg);
+    font-weight: var(--font-weight-bold);
   }
 
   &__segment {
@@ -23,8 +23,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
     padding: 4px;
-    border-radius: 8px;
-    background: #f1ece5;
+    border-radius: var(--radius-control);
+    background: var(--color-surface-muted);
   }
 
   &__option {
@@ -33,14 +33,14 @@
     align-items: center;
     justify-content: center;
     gap: 7px;
-    border-radius: 6px;
-    color: #74695e;
-    font-size: 12px;
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--font-caption);
 
     &--selected {
-      color: #81453e;
-      background: #fffdfa;
-      box-shadow: 0 3px 10px rgba(76, 57, 42, 0.08);
+      color: var(--color-primary-text);
+      background: var(--color-surface);
+      box-shadow: var(--shadow-card);
     }
   }
 

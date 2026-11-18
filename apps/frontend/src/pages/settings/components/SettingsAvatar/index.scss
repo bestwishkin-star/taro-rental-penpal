@@ -3,7 +3,8 @@
   flex-direction: column;
   align-items: center;
   padding: 32px 0 24px;
-  background: #fff;
+  background: var(--color-surface);
+  border-radius: var(--radius-card);
 
   &__btn {
     width: 80px;
@@ -30,12 +31,12 @@
     width: 80px;
     height: 80px;
     border-radius: 50%;
-    background: #e8e0d6;
+    background: var(--color-surface-muted);
   }
 
   &__hint {
     margin-top: 10px;
-    font-size: 12px;
-    color: #8b7761;
+    font-size: var(--font-caption);
+    color: var(--color-text-secondary);
   }
 }

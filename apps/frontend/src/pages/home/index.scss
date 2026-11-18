@@ -1,26 +1,12 @@
-.home-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-bottom: 24px;
+.home-page {
+  padding: 0;
+  background: var(--color-page);
 }
 
-.home-tips {
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: rgba(246, 221, 174, 0.25);
-  border: 1px solid rgba(142, 108, 60, 0.15);
+.app-layout--with-tab-bar .home-page {
+  --app-layout-content-bottom: 124px;
 }
 
-.home-tips__title {
-  color: #6d5430;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-
-.home-tips__text {
-  color: #8b7761;
-  font-size: 13px;
-  line-height: 1.6;
+.home-page__content {
+  padding: 0 16px;
 }

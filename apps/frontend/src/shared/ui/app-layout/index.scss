@@ -1,8 +1,8 @@
 .app-layout {
   width: 100%;
   min-height: 100vh;
-  color: #2d241b;
-  background: #f5efe6;
+  color: var(--color-text);
+  background: var(--color-page);
 }
 
 .app-layout--list,

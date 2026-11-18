@@ -1,0 +1,73 @@
+// 统一 CTA 的尺寸、颜色和交互状态；业务组件只负责宽度、间距和事件。
+@mixin button($variant: primary, $size: default) {
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  height: var(--control-height);
+  min-height: var(--control-height);
+  margin: 0;
+  padding: 0 var(--space-lg);
+  border: 1px solid transparent;
+  border-radius: var(--radius-control);
+  font-family: var(--font-family);
+  font-size: var(--font-body-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  text-align: center;
+  box-shadow: none;
+  transition: background var(--duration-fast) ease, opacity var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
+
+  @if $variant == primary {
+    color: var(--color-on-primary);
+    background: var(--color-primary);
+    box-shadow: var(--shadow-primary);
+  } @else if $variant == secondary {
+    color: var(--color-text);
+    border-color: var(--color-border);
+    background: var(--color-surface);
+  } @else if $variant == ghost {
+    color: var(--color-primary-text);
+    background: transparent;
+  } @else if $variant == danger {
+    color: var(--color-danger);
+    background: var(--color-danger-soft);
+  }
+
+  @if $size == compact {
+    height: var(--control-height-compact);
+    min-height: var(--control-height-compact);
+    font-size: var(--font-body);
+  }
+
+  &::after { border: 0; }
+
+  // 同时覆盖 Taro hoverClass、原生 Button 状态及 H5 键盘状态。
+  &:active, &--pressed, &--active, &--hover {
+    @if $variant == primary { background: var(--color-primary-pressed); }
+    opacity: var(--opacity-pressed);
+    transform: scale(0.985);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+
+  &[disabled], &[aria-disabled='true'], &--disabled, &--loading {
+    opacity: var(--opacity-disabled);
+    transform: none;
+    box-shadow: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+    &:active, &--pressed, &--active, &--hover { transform: none; }
+  }
+}
+
+// 表单获得焦点时统一强调色，保留业务组件的尺寸和排版。
+@mixin field-focus {
+  &:focus, &:focus-within { border-color: var(--color-primary); }
+}

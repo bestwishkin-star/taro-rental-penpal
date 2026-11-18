@@ -1,0 +1,6 @@
+// 页面与原生独立组件从同一份配置声明主题，避免依赖跨组件样式继承。
+@mixin variables($tokens) {
+  @each $name, $value in $tokens {
+    --#{$name}: #{$value};
+  }
+}

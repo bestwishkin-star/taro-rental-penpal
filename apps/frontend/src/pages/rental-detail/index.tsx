@@ -7,6 +7,7 @@ import { fetchFavoriteStatus, fetchRental, getBrowseHistory, saveToBrowseHistory
 import { frontendEnv } from '@/shared/config/env';
 import { useAuthStore } from '@/shared/store';
 import { AppLayout } from '@/shared/ui/app-layout';
+import themeTokens from '@/styles/tokens.json';
 
 import { CommentSection } from './components/CommentSection';
 import { ReportPanel } from './components/ReportPanel';
@@ -112,7 +113,7 @@ export default function RentalDetailPage() {
             className="detail-hero__swiper"
             indicatorDots={photos.length > 1}
             indicatorColor="rgba(255, 250, 242, 0.45)"
-            indicatorActiveColor="#fffaf2"
+            indicatorActiveColor={themeTokens['color-on-image']}
             circular
           >
             {photos.map((url, i) => (

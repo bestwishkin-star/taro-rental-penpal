@@ -1,3 +1,5 @@
+@use '../../../styles/controls';
+
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -6,16 +8,12 @@
   padding: 80px 32px;
 
   &__message {
-    font-size: 14px;
-    color: #999;
+    font-size: var(--font-body);
+    color: var(--color-text-muted);
     margin-bottom: 24px;
   }
 
   &__btn {
-    padding: 10px 24px;
-    border-radius: 20px;
-    border: 1px solid #ddd;
-    font-size: 13px;
-    color: #666;
+    @include controls.button(secondary, compact);
   }
 }

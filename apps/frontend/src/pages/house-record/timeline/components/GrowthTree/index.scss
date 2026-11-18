@@ -1,61 +1,49 @@
+@use '../../../../../styles/controls';
+
 .growth-tree {
-  position: relative;
   overflow: hidden;
   width: 100%;
-  min-height: 844px;
-  background: #cfe8ef;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+  background: var(--color-page);
 }
-
-.growth-tree__scene {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+.growth-tree__heading { padding: 20px 22px 12px; }
+.growth-tree__heading-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.growth-tree__title { color: var(--color-text); font-size: var(--font-page-title); font-weight: var(--font-weight-bold); line-height: 34px; }
+.growth-tree__today {
+  @include controls.button(primary, compact);
+  flex-shrink: 0;
+  margin: 0;
+  &::after { border: 0; }
 }
-
-.growth-tree__veil {
-  position: absolute;
-  z-index: 1;
-  inset: 0 0 auto;
-  height: 156px;
-  background: linear-gradient(
-    180deg,
-    rgba(247, 251, 247, 0.92) 0%,
-    rgba(247, 251, 247, 0.52) 64%,
-    rgba(247, 251, 247, 0) 100%
-  );
+.growth-tree__today--pressed, .growth-tree__today:active { background: var(--color-primary-pressed); transform: scale(0.96); }
+.growth-tree__range { display: block; margin-top: 6px; color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 19px; }
+.growth-tree__summary-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 6px; }
+.growth-tree__summary { color: var(--color-primary-text); font-size: var(--font-caption); line-height: 18px; white-space: nowrap; }
+.growth-tree__legend { display: flex; align-items: center; gap: 8px; color: var(--color-text-secondary); font-size: var(--font-caption); }
+.growth-tree__legend-item { display: flex; align-items: center; gap: 3px; white-space: nowrap; }
+.growth-tree__legend-icon { display: block; width: 18px; height: 18px; }
+.growth-tree__motion { min-width: 44px; min-height: 44px; flex-shrink: 0; margin: -5px -6px -5px 0; padding: 0 4px; border: 0; background: transparent; color: var(--color-primary-text); font-size: var(--font-caption); line-height: 44px; &::after { border: 0; } }
+/* 固定原图比例；动态只作用于单独叶片、花果及微光，不扭曲树干。 */
+.growth-tree__scene { position: relative; width: 100%; height: 0; padding-top: 300%; }
+.growth-tree__image { position: absolute; inset: 0; width: 100%; height: 100%; }
+.growth-tree__leaf { position: absolute; z-index: 1; width: 64px; height: 64px; pointer-events: none; transform-origin: 18% 82%; animation: growth-leaf-sway 5s ease-in-out infinite; }
+.growth-tree__leaf--0 { top: 0.4%; left: 0; }
+.growth-tree__leaf--1 { top: 38%; right: -8px; width: 58px; height: 58px; animation-delay: -2s; animation-direction: reverse; }
+.growth-tree__leaf--2 { top: 73%; left: -8px; width: 52px; height: 52px; animation-delay: -3.2s; }
+.growth-tree__pollen { position: absolute; z-index: 1; width: 4px; height: 4px; border-radius: 50%; background: #fffbd0; box-shadow: 0 0 6px #fff7b4; pointer-events: none; animation: growth-pollen 7s ease-in-out infinite; }
+.growth-tree__pollen--0 { top: 15%; left: 83%; }
+.growth-tree__pollen--1 { top: 33%; left: 14%; animation-delay: -1.8s; }
+.growth-tree__pollen--2 { top: 54%; left: 76%; animation-delay: -3.5s; }
+.growth-tree__pollen--3 { top: 77%; left: 12%; animation-delay: -5.2s; }
+.growth-tree__footer { padding: 18px 22px 0; text-align: center; }
+.growth-tree__footer-title { display: block; color: var(--color-primary-text); font-size: var(--font-small); font-weight: var(--font-weight-semibold); line-height: 22px; }
+.growth-tree__hint { display: block; margin-top: 5px; color: var(--color-text-secondary); font-size: var(--font-caption); line-height: 19px; }
+@keyframes growth-leaf-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(5deg); } }
+@keyframes growth-pollen { 0%, 100% { opacity: 0; transform: translate(0, 8px); } 35%, 65% { opacity: 0.7; } 90% { opacity: 0; transform: translate(12px, -24px); } }
+.growth-tree--paused {
+  .growth-tree__leaf, .growth-tree__pollen, .timeline-node__asset, .timeline-node__ring { animation-play-state: paused; }
 }
-
-.growth-tree__heading {
-  position: absolute;
-  z-index: 4;
-  top: 20px;
-  right: 20px;
-  left: 20px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.growth-tree__eyebrow {
-  color: #b0523e;
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 17px;
-}
-
-.growth-tree__title {
-  width: 280px;
-  margin-top: 2px;
-  color: #27372f;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.42;
-}
-
-.growth-tree__summary {
-  margin-top: 5px;
-  color: #607268;
-  font-size: 12px;
-  line-height: 18px;
+@media (prefers-reduced-motion: reduce) {
+  .growth-tree__leaf, .growth-tree__pollen { animation: none; }
+  .growth-tree__pollen { display: none; }
 }
