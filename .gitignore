@@ -22,9 +22,16 @@ coverage
 
 # 鏋勫缓浜х墿
 apps/frontend/dist
+apps/frontend/dist-prod
 apps/frontend/.swc
 apps/backend/.next
 
 # Git worktrees
 .worktrees/
 
+# 本地设计稿、预览产物与过程说明
+/output/
+/designs/
+/docs/superpowers/plans/2026-11-17-natural-growth-tree-plan.md
+/docs/superpowers/specs/2026-11-17-natural-growth-tree-design.md
+/apps/frontend/src/styles/README.md
