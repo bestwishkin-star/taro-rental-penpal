@@ -1,12 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
-  readHouseRecordSnapshot,
-  readHouseRecordSnapshotStatus,
-  readHouseRecordTimeline,
-  readHouseRecords,
-  updateOwnedHouseRecord
-} from './house-record.service';
+  isHouseRecordOwner,
+  listTimelineActivities
+} from './house-record-activity.repository';
+import { publishCurrentHouseRecord } from './house-record-snapshot.service';
 import {
   countRecentSnapshots,
   getBatchTrustLabels,
@@ -21,11 +19,13 @@ import {
   listTimelineModules,
   listTimelineSnapshots
 } from './house-record.repository';
-import { publishCurrentHouseRecord } from './house-record-snapshot.service';
 import {
-  isHouseRecordOwner,
-  listTimelineActivities
-} from './house-record-activity.repository';
+  readHouseRecordSnapshot,
+  readHouseRecordSnapshotStatus,
+  readHouseRecordTimeline,
+  readHouseRecords,
+  updateOwnedHouseRecord
+} from './house-record.service';
 
 vi.mock('./house-record-activity.repository', () => ({
   isHouseRecordOwner: vi.fn(),
@@ -99,7 +99,7 @@ describe('house-record.service', () => {
     expect(getBatchTrustLabels).toHaveBeenCalledTimes(1);
   });
 
-  it('时间线只返回数据库中真实存在的快照日期', async () => {
+  it('时间线只返回今天和有真实快照的历史日期', async () => {
     vi.mocked(getPublicHouseRecordSummary).mockResolvedValue({
       rentalId: 'rental-1',
       title: '窗边的日常',
@@ -132,13 +132,63 @@ describe('house-record.service', () => {
       new Map([['rental-1', ['SPACE_RECORD_COMPLETE']]])
     );
 
-    const result = await readHouseRecordTimeline('rental-1', 30, new Date('2026-08-06T08:00:00.000Z'));
+    const result = await readHouseRecordTimeline('rental-1', new Date('2026-08-06T08:00:00.000Z'));
 
-    expect(result.nodes.map((node) => node.snapshotDate)).toEqual(['2026-08-06', '2026-08-02']);
+    expect(result.nodes.filter((node) => node.hasRecord).map((node) => node.snapshotDate))
+      .toEqual(['2026-08-06', '2026-08-02']);
     expect(result.nodes).toHaveLength(2);
+    expect(result.nodes[0]).toMatchObject({ isToday: true, hasRecord: true });
+    expect(result.nodes[1]).toMatchObject({
+      snapshotDate: '2026-08-02', hasRecord: true, isToday: false, activityState: 'PUBLIC_UPDATE'
+    });
     expect(result.nodes[0]?.isLatest).toBe(true);
-    expect(result.rangeStart).toBe('2026-07-08');
+    expect(result.rangeStart).toBe('2026-08-02');
     expect(result.rangeEnd).toBe('2026-08-06');
+  });
+
+  it('没有历史快照时只保留今天的未上报入口', async () => {
+    vi.mocked(getPublicHouseRecordSummary).mockResolvedValue({
+      rentalId: 'rental-1', title: '窗边的日常', nickname: '阿禾', avatar: ''
+    });
+    vi.mocked(listTimelineSnapshots).mockResolvedValue([]);
+    vi.mocked(listTimelineModules).mockResolvedValue(new Map());
+    vi.mocked(getBatchTrustLabels).mockResolvedValue(new Map());
+    vi.mocked(isHouseRecordOwner).mockResolvedValue(true);
+
+    const result = await readHouseRecordTimeline(
+      'rental-1', new Date('2026-11-16T16:01:00Z'), 'owner-1'
+    );
+
+    expect(result.isOwner).toBe(true);
+    expect(result.nodes).toHaveLength(1);
+    expect(new Set(result.nodes.map((node) => node.snapshotDate)).size).toBe(1);
+    expect(result.nodes[0]).toMatchObject({
+      snapshotDate: '2026-11-17', isToday: true, hasRecord: false, activityState: 'NOT_REPORTED'
+    });
+    expect(result.nodes.every((node) => !node.hasRecord && !node.isLatest && !node.source)).toBe(true);
+    expect(result.nodes.filter((node) => node.isToday)).toHaveLength(1);
+    expect(listTimelineSnapshots).toHaveBeenCalledWith('rental-1', '2026-11-17');
+    expect(result.rangeStart).toBe('2026-11-17');
+  });
+
+  it('最新快照不是今天时仍保留今天的未上报入口', async () => {
+    vi.mocked(getPublicHouseRecordSummary).mockResolvedValue({
+      rentalId: 'rental-1', title: '窗边的日常', nickname: '阿禾', avatar: ''
+    });
+    vi.mocked(listTimelineSnapshots).mockResolvedValue([{
+      snapshotId: 'snapshot-1', snapshotDate: '2026-09-02', source: 'MANUAL_UPDATE',
+      contentPreview: undefined, coverPhoto: undefined
+    }]);
+    vi.mocked(listTimelineModules).mockResolvedValue(new Map());
+    vi.mocked(getBatchTrustLabels).mockResolvedValue(new Map());
+
+    const result = await readHouseRecordTimeline('rental-1', new Date('2026-11-17T04:00:00Z'));
+
+    expect(result.isOwner).toBe(false);
+    expect(result.nodes[0]).toMatchObject({ isToday: true, hasRecord: false, isLatest: false });
+    expect(result.nodes).toHaveLength(2);
+    expect(result.nodes[1]).toMatchObject({ snapshotDate: '2026-09-02', isToday: false, hasRecord: true, isLatest: true });
+    expect(result.rangeStart).toBe('2026-09-02');
   });
 
   it('私密活动只暴露匿名节点状态', async () => {
@@ -173,12 +223,12 @@ describe('house-record.service', () => {
 
     const result = await readHouseRecordTimeline(
       'rental-1',
-      30,
       new Date('2026-08-10T08:00:00.000Z')
     );
 
     expect(result.nodes[0]).toMatchObject({
       activityState: 'PRIVATE_ACTIVITY',
+      hasRecord: true,
       updatedModules: [],
       hasPrivateActivity: true
     });
@@ -217,13 +267,11 @@ describe('house-record.service', () => {
 
     const publicResult = await readHouseRecordTimeline(
       'rental-1',
-      30,
       new Date('2026-08-10T08:00:00.000Z')
     );
     vi.mocked(isHouseRecordOwner).mockResolvedValue(true);
     const ownerResult = await readHouseRecordTimeline(
       'rental-1',
-      30,
       new Date('2026-08-10T08:00:00.000Z'),
       'owner-1'
     );

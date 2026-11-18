@@ -257,8 +257,8 @@ export async function getPublicHouseRecordSummary(rentalId: string) {
     : null;
 }
 
-/** 读取最近窗口内真实存在的快照，不补齐缺失日期。 */
-export async function listTimelineSnapshots(rentalId: string, range: HouseRecordDateRange) {
+/** 读取截至今天的最近 15 个真实快照，供服务层保留今天及 14 个历史日期。 */
+export async function listTimelineSnapshots(rentalId: string, today: string) {
   await ensureHouseRecordSnapshotSchema();
   const [rows] = await pool.execute<TimelineRow[]>(
     `SELECT s.id, DATE_FORMAT(s.snapshot_date, '%Y-%m-%d') AS snapshot_date,
@@ -266,9 +266,9 @@ export async function listTimelineSnapshots(rentalId: string, range: HouseRecord
      FROM rental_public_snapshots s
      INNER JOIN rentals r ON r.id = s.rental_id
        AND r.status = 1 AND COALESCE(r.post_status, 'active') = 'active'
-     WHERE s.rental_id = ? AND s.snapshot_date BETWEEN ? AND ?
-     ORDER BY s.snapshot_date DESC`,
-    [rentalId, range.start, range.end]
+     WHERE s.rental_id = ? AND s.snapshot_date <= ?
+     ORDER BY s.snapshot_date DESC LIMIT 15`,
+    [rentalId, today]
   );
   return rows.map((row) => ({
     snapshotId: row.id,

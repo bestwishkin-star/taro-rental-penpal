@@ -10,6 +10,7 @@ export type RentalSnapshotSource = 'MANUAL_UPDATE' | 'RANDOM_TASK' | 'SYSTEM';
 
 /** 成长树节点对当前查看者可见的观察活动状态。 */
 export type HouseRecordActivityState =
+  | 'NOT_REPORTED'
   | 'PUBLIC_UPDATE'
   | 'PRIVATE_ACTIVITY'
   | 'REVIEW_PENDING'
@@ -34,10 +35,15 @@ export interface HouseRecordListing {
   updatedAt: string;
 }
 
-/** 最近 30 天时间线中的一个真实更新日期。 */
+/** 成长树日期节点：今天始终保留，其余最多 14 个有记录的历史日期。 */
 export interface HouseRecordTimelineNode {
   snapshotDate: string;
-  source: RentalSnapshotSource;
+  /** 只有已上报日期才有快照来源。 */
+  source?: RentalSnapshotSource;
+  /** 当天是否已有上报快照，与内容是否公开无关。 */
+  hasRecord: boolean;
+  /** 是否为服务端按上海时区计算的今天。 */
+  isToday: boolean;
   activityState: HouseRecordActivityState;
   updatedModules: HouseModuleId[];
   hasPrivateActivity: boolean;
@@ -52,6 +58,8 @@ export interface HouseRecordTimelineResponse {
   title: string;
   author: HouseRecordAuthor;
   trustLabels: RentalTrustLabel[];
+  /** 当前查看者是否为房主，用于开放今日上报入口。 */
+  isOwner: boolean;
   rangeStart: string;
   rangeEnd: string;
   nodes: HouseRecordTimelineNode[];

@@ -7,17 +7,14 @@ interface TimelineRouteContext {
   params: Promise<{ rentalId: string }>;
 }
 
-/** 返回指定房屋最近 30 天真实存在的更新节点，并按可选房主身份保护拒绝状态。 */
+/** 返回指定房屋今天及最近 14 个有记录的历史日期节点，并按可选房主身份保护拒绝状态。 */
 export async function GET(request: Request, context: TimelineRouteContext) {
   try {
     const { rentalId } = await context.params;
-    const { searchParams } = new URL(request.url);
-    const parsedDays = Number.parseInt(searchParams.get('days') ?? '30', 10);
-    const days = Number.isFinite(parsedDays) && parsedDays > 0 ? Math.min(parsedDays, 30) : 30;
     const authorization = request.headers.get('authorization') ?? '';
     const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : null;
     const viewer = token ? await verifyToken(token) : null;
-    return ok(await readHouseRecordTimeline(rentalId, days, new Date(), viewer?.openid));
+    return ok(await readHouseRecordTimeline(rentalId, new Date(), viewer?.openid));
   } catch (error) {
     return handleError(error);
   }

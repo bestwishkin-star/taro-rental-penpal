@@ -15,7 +15,8 @@ import {
   listTimelineActivities,
   type HouseRecordTimelineActivity
 } from './house-record-activity.repository';
-import { getShanghaiDate, getTimelineRange } from './house-record-date';
+import { getShanghaiDate, getTimelineDates, getTimelineRange } from './house-record-date';
+import { publishCurrentHouseRecord } from './house-record-snapshot.service';
 import {
   countRecentSnapshots,
   getBatchTrustLabels,
@@ -30,7 +31,6 @@ import {
   listTimelineModules,
   listTimelineSnapshots
 } from './house-record.repository';
-import { publishCurrentHouseRecord } from './house-record-snapshot.service';
 
 /** 发现列表单页最大数量，避免公开接口被超大分页拖垮。 */
 const MAX_PAGE_SIZE = 50;
@@ -108,18 +108,20 @@ export async function readHouseRecords(
   }));
 }
 
-/** 读取最近 30 天成长树，仅映射数据库真实存在的更新日期。 */
+/** 返回今天及最近 14 个有记录的历史日期，稀疏记录不受自然日窗口限制。 */
 export async function readHouseRecordTimeline(
   rentalId: string,
-  _days = 30,
   now = new Date(),
   viewerOpenid?: string
 ): Promise<HouseRecordTimelineResponse> {
-  const range = getTimelineRange(getShanghaiDate(now));
+  const today = getShanghaiDate(now);
   const summary = await getPublicHouseRecordSummary(rentalId);
   if (!summary) throw new AppError(BizCode.RENTAL_NOT_FOUND);
 
-  const snapshots = await listTimelineSnapshots(rentalId, range);
+  const recentSnapshots = await listTimelineSnapshots(rentalId, today);
+  const dates = getTimelineDates(today, recentSnapshots.map((snapshot) => snapshot.snapshotDate));
+  const snapshots = recentSnapshots.filter((snapshot) => dates.includes(snapshot.snapshotDate));
+  const range = { start: dates[dates.length - 1], end: today };
   const [modules, labels, activities, isOwner] = await Promise.all([
     listTimelineModules(snapshots.map((snapshot) => snapshot.snapshotId)),
     getBatchTrustLabels([rentalId]),
@@ -132,14 +134,29 @@ export async function readHouseRecordTimeline(
     current.push(activity);
     activitiesByDate.set(activity.snapshotDate, current);
   }
+  const snapshotsByDate = new Map(snapshots.map((snapshot) => [snapshot.snapshotDate, snapshot]));
   return {
     rentalId,
     title: summary.title,
     author: { nickname: summary.nickname, avatar: summary.avatar },
     trustLabels: labels.get(rentalId) ?? [],
+    isOwner,
     rangeStart: range.start,
     rangeEnd: range.end,
-    nodes: snapshots.map((snapshot, index) => {
+    nodes: dates.map((snapshotDate) => {
+      const snapshot = snapshotsByDate.get(snapshotDate);
+      const isToday = snapshotDate === range.end;
+      if (!snapshot) {
+        return {
+          snapshotDate,
+          hasRecord: false,
+          isToday,
+          activityState: 'NOT_REPORTED',
+          updatedModules: [],
+          hasPrivateActivity: false,
+          isLatest: false
+        };
+      }
       const dailyActivities = activitiesByDate.get(snapshot.snapshotDate);
       const activity = dailyActivities
         ? summarizeTimelineActivities(dailyActivities, isOwner)
@@ -149,14 +166,17 @@ export async function readHouseRecordTimeline(
       return {
         snapshotDate: snapshot.snapshotDate,
         source: snapshot.source,
+        hasRecord: true,
+        isToday,
         activityState,
         updatedModules: activity
           ? activity.publicModules
           : modules.get(snapshot.snapshotId) ?? [],
         hasPrivateActivity: activity?.hasPrivateActivity ?? false,
-        contentPreview: canShowPublicMedia ? snapshot.contentPreview : undefined,
-        coverPhoto: canShowPublicMedia ? snapshot.coverPhoto : undefined,
-        isLatest: index === 0
+        ...(canShowPublicMedia
+          ? { contentPreview: snapshot.contentPreview, coverPhoto: snapshot.coverPhoto }
+          : {}),
+        isLatest: snapshot.snapshotDate === dates.find((date) => snapshotsByDate.has(date))
       };
     })
   };
